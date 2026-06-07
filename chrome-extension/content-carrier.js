@@ -1,7 +1,8 @@
 function carrierName(id) {
   const names = {
     purolator: "Purolator",
-    shipsavvy: "ShipSavvy",
+    shipsavvy: "ShipSavvy Orders",
+    shipsavvyPickup: "ShipSavvy Pickup",
     canadaPost: "Canada Post",
     abCourier: "AB Courier",
     freightera: "Freightera"

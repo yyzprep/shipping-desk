@@ -54,7 +54,7 @@ const carriers = {
     }
   },
   shipsavvy: {
-    name: "ShipSavvy",
+    name: "ShipSavvy Orders",
     short: "SS",
     section: "parcel",
     color: "#176b55",
@@ -76,6 +76,32 @@ const carriers = {
       email: [
         "Review the generated email for the ShipSavvy shipment.",
         "Add tracking, label, pickup, or reference details if available.",
+        "Open the draft and send after review."
+      ]
+    }
+  },
+  shipsavvyPickup: {
+    name: "ShipSavvy Pickup",
+    short: "SS",
+    section: "parcel",
+    color: "#176b55",
+    portal: "https://my.shipsavvy.com/pickups/create/carrier",
+    note: "Van pickup request",
+    checklist: {
+      pickup: [
+        "Click Submit ShipSavvy Pickup.",
+        "Select the carrier pickup option in ShipSavvy.",
+        "Confirm the pickup date and pickup details.",
+        "Stop before the final submit action."
+      ],
+      shipment: [
+        "Use ShipSavvy Orders for shipment creation.",
+        "Enter delivery address, package details, dimensions, and weight.",
+        "Stop before the final buy, pay, or create-label action."
+      ],
+      email: [
+        "Review the generated ShipSavvy pickup update.",
+        "Add pickup confirmation details if available.",
         "Open the draft and send after review."
       ]
     }
@@ -297,6 +323,8 @@ const pickupDateLabel = document.querySelector("#pickupDateLabel");
 const dateChoiceButtons = document.querySelectorAll("[data-date-choice]");
 const timeWindowControl = document.querySelector(".time-window-control");
 const timeWindowButtons = document.querySelector("#timeWindowButtons");
+const readyTimeField = document.querySelector("#readyTimeField");
+const closeTimeField = document.querySelector("#closeTimeField");
 
 function makeId() {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -377,6 +405,26 @@ function isPickupOnlyCarrier() {
 
 function isShipmentDefaultCarrier() {
   return state.carrier === "shipsavvy";
+}
+
+function isNoTimeCarrier() {
+  return state.carrier === "shipsavvyPickup";
+}
+
+function isShipSavvyCarrier() {
+  return state.carrier === "shipsavvy" || state.carrier === "shipsavvyPickup";
+}
+
+function submitButtonLabel() {
+  if (state.carrier === "shipsavvyPickup") return "Submit ShipSavvy Pickup";
+  if (state.task === "pickup") return `Submit ${carriers[state.carrier].name} pickup`;
+  if (state.task === "shipment") return `Submit ${carriers[state.carrier].name} order`;
+  return `Open ${carriers[state.carrier].name}`;
+}
+
+function actionTypeLabel() {
+  if (state.carrier === "shipsavvyPickup") return "pickup";
+  return state.task === "shipment" ? "order" : "pickup";
 }
 
 function setTask(task) {
@@ -486,7 +534,7 @@ function applyPurolatorPreset() {
 }
 
 function applyShipSavvyPreset() {
-  if (state.carrier !== "shipsavvy") return;
+  if (!isShipSavvyCarrier()) return;
   const values = {
     pickupAddress: shipSavvyPreset.businessAddressLines.join("\n"),
     service: "Standard"
@@ -549,6 +597,8 @@ function renderHeader() {
   optionsTitle.textContent = state.carrier === "shipsavvy" ? "Order details" : "Pickup details";
   pickupAddressLabel.textContent = state.carrier === "shipsavvy" ? "Business / warehouse address" : "Pickup address";
   destinationAddressLabel.textContent = state.carrier === "shipsavvy" ? "Delivery address" : "Destination address";
+  readyTimeField.hidden = isNoTimeCarrier();
+  closeTimeField.hidden = isNoTimeCarrier();
 }
 
 function updatePickupDateDisplay() {
@@ -572,7 +622,7 @@ function updatePickupWindowButtons() {
 function renderPickupWindowPresets() {
   const preset = carrierWindowPresets[state.carrier];
   const windows = preset?.windows || [];
-  timeWindowControl.hidden = !windows.length;
+  timeWindowControl.hidden = isNoTimeCarrier() || !windows.length;
   timeWindowButtons.innerHTML = windows.map((windowPreset) => `
     <button type="button" class="quick-button" data-window-start="${windowPreset.start}" data-window-end="${windowPreset.end}">
       ${windowPreset.label}
@@ -581,6 +631,11 @@ function renderPickupWindowPresets() {
 }
 
 function applyCarrierDefaultWindow() {
+  if (isNoTimeCarrier()) {
+    form.elements.readyTime.value = "";
+    form.elements.closeTime.value = "";
+    return;
+  }
   const preset = carrierWindowPresets[state.carrier];
   if (!preset?.windows?.length) return;
   const defaultWindow = preset.windows[preset.defaultIndex || 0] || preset.windows[0];
@@ -790,7 +845,7 @@ function renderOutputs() {
   if (state.carrier === "purolator") {
     applyPurolatorPreset();
   }
-  if (state.carrier === "shipsavvy") {
+  if (isShipSavvyCarrier()) {
     applyShipSavvyPreset();
   }
   renderHeader();
@@ -805,11 +860,7 @@ function renderOutputs() {
   checklistBlock.hidden = true;
   emailOutputBlock.hidden = true;
   draftEmailButton.hidden = true;
-  document.querySelector("#openPortal").textContent = state.task === "pickup"
-    ? `Submit ${carriers[state.carrier].name} pickup`
-    : state.task === "shipment"
-      ? `Submit ${carriers[state.carrier].name} order`
-      : `Open ${carriers[state.carrier].name}`;
+  document.querySelector("#openPortal").textContent = submitButtonLabel();
   copySummaryButton.hidden = true;
   saveLogButton.hidden = true;
   copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy booking info";
@@ -889,6 +940,7 @@ function compactDateLabel(dateValue) {
 }
 
 function compactTimeWindow(entry) {
+  if (entry.carrier === "shipsavvyPickup") return "";
   if (!entry.readyTime && !entry.closeTime) return "No time set";
   return [entry.readyTime || "?", entry.closeTime || "?"].join("-");
 }
@@ -913,8 +965,8 @@ function createPickupEntry(status = "booking") {
     reference: data.reference || "No confirmation yet",
     recipient: data.recipient || data.contactName || upsPreset.companyName || "No recipient",
     pickupDate: data.readyDate || "",
-    readyTime: data.readyTime || "",
-    closeTime: data.closeTime || "",
+    readyTime: isNoTimeCarrier() ? "" : data.readyTime || "",
+    closeTime: isNoTimeCarrier() ? "" : data.closeTime || "",
     skids: data.skids || "",
     notes,
     summary: presetCopyText(),
@@ -934,7 +986,7 @@ function savePickupEntry(entry) {
 function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
-  flash(`${carriers[state.carrier].name} ${state.task === "shipment" ? "order" : "pickup"} prepared for review`);
+  flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
   window.setTimeout(() => {
     window.location.href = entry.bookingUrl;
   }, 100);
