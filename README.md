@@ -1,4 +1,4 @@
-# Shipping Desk
+# Assistant Hub
 
 A small static web app for organizing shipping tasks:
 

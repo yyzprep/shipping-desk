@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Shipping Desk Helper",
+  "name": "Assistant Hub Helper",
   "version": "0.1.0",
-  "description": "Carries Shipping Desk pickup details into carrier booking pages.",
+  "description": "Carries Assistant Hub pickup details into carrier booking pages.",
   "permissions": ["storage", "clipboardWrite"],
   "host_permissions": [
     "https://yyzprep.github.io/shipping-desk/*",
