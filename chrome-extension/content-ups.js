@@ -387,18 +387,17 @@ function runUpsAutomation(booking) {
     confirmClassicView();
   }
 
-  const runFill = (shouldAdvance = false) => {
+  const runFill = () => {
     if (!isClassicPickupPage()) {
       confirmClassicView();
     } else {
       const standardSelected = fillUpsPickup(booking);
-      updateHelperStatus(standardSelected ? "UPS Standard selected" : "Filled page 1. UPS Standard was not available.");
-      if (shouldAdvance) clickUpsNextToReview();
+      updateHelperStatus(standardSelected ? "UPS Standard selected. Review fields, then click Go to UPS review." : "Filled page 1. UPS Standard was not available.");
     }
   };
 
-  window.setTimeout(() => runFill(false), 900);
-  upsAutomationTimer = window.setTimeout(() => runFill(true), 2800);
+  window.setTimeout(runFill, 900);
+  upsAutomationTimer = window.setTimeout(runFill, 2800);
 }
 
 function clickUpsNextToReview() {
@@ -533,9 +532,10 @@ function injectPanel(booking) {
   panel.innerHTML = `
     <strong>Assistant Hub Helper v${HELPER_VERSION}</strong>
     <button type="button" data-ups-action="fill">${isUpsPaymentOrReviewPage() ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
+    ${isUpsPaymentOrReviewPage() ? "" : `<button type="button" data-ups-action="next">Go to UPS review</button>`}
     <button type="button" data-ups-action="debug">Copy UPS debug</button>
     <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
-    <small>${isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Manual mode: click Fill UPS once, then copy debug if Standard is missing." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
+    <small>${isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Review the fields yourself. Only click Go to UPS review when ready." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -562,6 +562,7 @@ function injectPanel(booking) {
     const button = event.target.closest("[data-ups-action]");
     if (!button) return;
     if (button.dataset.upsAction === "fill") runUpsAutomation(booking);
+    if (button.dataset.upsAction === "next") clickUpsNextToReview();
     if (button.dataset.upsAction === "debug") copyUpsDebug(booking);
   });
   document.body.append(panel);
