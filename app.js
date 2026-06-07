@@ -168,6 +168,28 @@ const carrierSections = [
   { id: "ltl", label: "LTL" }
 ];
 
+const carrierWindowPresets = {
+  ups: {
+    defaultIndex: 1,
+    windows: [
+      { label: "12-2", start: "12:00", end: "14:00" },
+      { label: "2-4", start: "14:00", end: "16:00" }
+    ]
+  },
+  purolator: {
+    defaultIndex: 0,
+    windows: [
+      { label: "10-5", start: "10:00", end: "17:00" }
+    ]
+  },
+  canadaPost: {
+    defaultIndex: 0,
+    windows: [
+      { label: "12-5", start: "12:00", end: "17:00" }
+    ]
+  }
+};
+
 const upsPreset = {
   trackingNumbers: [
     "1Z0XXXXXXXXXXXXX18",
@@ -273,7 +295,8 @@ const copySummaryButton = document.querySelector("#copySummary");
 const saveLogButton = document.querySelector("#saveLog");
 const pickupDateLabel = document.querySelector("#pickupDateLabel");
 const dateChoiceButtons = document.querySelectorAll("[data-date-choice]");
-const timeWindowButtons = document.querySelectorAll("[data-window-start][data-window-end]");
+const timeWindowControl = document.querySelector(".time-window-control");
+const timeWindowButtons = document.querySelector("#timeWindowButtons");
 
 function makeId() {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -539,11 +562,30 @@ function updatePickupDateDisplay() {
 }
 
 function updatePickupWindowButtons() {
-  timeWindowButtons.forEach((button) => {
+  document.querySelectorAll("[data-window-start][data-window-end]").forEach((button) => {
     const active = form.elements.readyTime.value === button.dataset.windowStart
       && form.elements.closeTime.value === button.dataset.windowEnd;
     button.classList.toggle("active", active);
   });
+}
+
+function renderPickupWindowPresets() {
+  const preset = carrierWindowPresets[state.carrier];
+  const windows = preset?.windows || [];
+  timeWindowControl.hidden = !windows.length;
+  timeWindowButtons.innerHTML = windows.map((windowPreset) => `
+    <button type="button" class="quick-button" data-window-start="${windowPreset.start}" data-window-end="${windowPreset.end}">
+      ${windowPreset.label}
+    </button>
+  `).join("");
+}
+
+function applyCarrierDefaultWindow() {
+  const preset = carrierWindowPresets[state.carrier];
+  if (!preset?.windows?.length) return;
+  const defaultWindow = preset.windows[preset.defaultIndex || 0] || preset.windows[0];
+  form.elements.readyTime.value = defaultWindow.start;
+  form.elements.closeTime.value = defaultWindow.end;
 }
 
 function setPickupDate(choice) {
@@ -753,6 +795,7 @@ function renderOutputs() {
   }
   renderHeader();
   renderChecklist();
+  renderPickupWindowPresets();
   const showUpsPreset = isUpsPickup();
   const showPurolatorPreset = isPurolatorPickup();
   upsPresetPanel.hidden = !showUpsPreset;
@@ -1081,6 +1124,7 @@ carrierList.addEventListener("click", (event) => {
   if (isShipmentDefaultCarrier()) {
     setTask("shipment");
   }
+  applyCarrierDefaultWindow();
   renderCarriers();
   renderOutputs();
 });
@@ -1105,8 +1149,10 @@ form.addEventListener("input", (event) => {
 dateChoiceButtons.forEach((button) => {
   button.addEventListener("click", () => setPickupDate(button.dataset.dateChoice));
 });
-timeWindowButtons.forEach((button) => {
-  button.addEventListener("click", () => setPickupWindow(button.dataset.windowStart, button.dataset.windowEnd));
+timeWindowButtons.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-window-start][data-window-end]");
+  if (!button) return;
+  setPickupWindow(button.dataset.windowStart, button.dataset.windowEnd);
 });
 document.querySelector("#openPortal").addEventListener("click", startPickupBooking);
 document.querySelector("#copySummary").addEventListener("click", () => copyText(presetCopyText(), presetCopyLabel()));
