@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shipping Desk</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Shipping actions">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">SD</div>
+          <div>
+            <h1>Shipping Desk</h1>
+            <p>Pickups, shipments, and draft emails in one place.</p>
+          </div>
+        </div>
+
+        <section class="panel compact">
+          <div class="panel-heading">
+            <h2>Task</h2>
+          </div>
+          <div class="segmented" role="radiogroup" aria-label="Task type">
+            <button class="segment active" data-task="pickup" role="radio" aria-checked="true">Pickup</button>
+            <button class="segment" data-task="shipment" role="radio" aria-checked="false">Shipment</button>
+            <button class="segment" data-task="email" role="radio" aria-checked="false">Email</button>
+          </div>
+        </section>
+
+        <section class="panel compact">
+          <div class="panel-heading">
+            <h2>Carrier</h2>
+          </div>
+          <div class="carrier-list" id="carrierList"></div>
+        </section>
+
+        <section class="panel compact">
+          <div class="panel-heading">
+            <h2>Templates</h2>
+            <button class="icon-button" id="saveTemplate" title="Save current values" aria-label="Save current values">
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
+          <select id="templateSelect" aria-label="Saved templates">
+            <option value="">No saved template</option>
+          </select>
+        </section>
+      </aside>
+
+      <section class="workspace" aria-label="Shipping workspace">
+        <div class="top-strip">
+          <div class="route-visual" aria-hidden="true">
+            <span class="node origin"></span>
+            <span class="route-line"></span>
+            <span class="truck">▰</span>
+            <span class="node destination"></span>
+          </div>
+          <div>
+            <p class="eyebrow" id="modeLabel">Pickup booking</p>
+            <h2 id="taskTitle">Book a pickup</h2>
+          </div>
+          <div class="status-pill" id="statusPill">UPS selected</div>
+        </div>
+
+        <div class="content-grid">
+          <form class="form-panel" id="shippingForm">
+            <div class="section-title">
+              <h3>Details</h3>
+              <button type="button" class="ghost-button" id="clearForm">Clear</button>
+            </div>
+
+            <div class="field-grid">
+              <label>
+                <span>Reference / order</span>
+                <input id="reference" name="reference" placeholder="Order 1842">
+              </label>
+              <label>
+                <span>Ready date</span>
+                <input id="readyDate" name="readyDate" type="date">
+              </label>
+              <label>
+                <span>Ready time</span>
+                <input id="readyTime" name="readyTime" type="time">
+              </label>
+              <label>
+                <span>Close time</span>
+                <input id="closeTime" name="closeTime" type="time">
+              </label>
+            </div>
+
+            <div class="field-grid two">
+              <label>
+                <span>Pickup contact</span>
+                <input id="contactName" name="contactName" placeholder="Reception / Sarah">
+              </label>
+              <label>
+                <span>Contact email</span>
+                <input id="contactEmail" name="contactEmail" type="email" placeholder="name@company.com">
+              </label>
+              <label>
+                <span>Phone</span>
+                <input id="phone" name="phone" placeholder="555-555-5555">
+              </label>
+              <label>
+                <span>Recipient / destination</span>
+                <input id="recipient" name="recipient" placeholder="Client or warehouse">
+              </label>
+            </div>
+
+            <label>
+              <span>Pickup address</span>
+              <textarea id="pickupAddress" name="pickupAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
+            </label>
+
+            <label>
+              <span>Destination address</span>
+              <textarea id="destinationAddress" name="destinationAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
+            </label>
+
+            <div class="field-grid package-grid">
+              <label>
+                <span>Packages</span>
+                <input id="packages" name="packages" type="number" min="1" value="1">
+              </label>
+              <label>
+                <span>Total weight</span>
+                <input id="weight" name="weight" placeholder="12 lb">
+              </label>
+              <label>
+                <span>Dimensions</span>
+                <input id="dimensions" name="dimensions" placeholder="12 x 10 x 8 in">
+              </label>
+              <label>
+                <span>Service</span>
+                <select id="service" name="service">
+                  <option>Standard</option>
+                  <option>Express</option>
+                  <option>Ground</option>
+                  <option>Overnight</option>
+                  <option>International</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              <span>Notes</span>
+              <textarea id="notes" name="notes" rows="3" placeholder="Dock instructions, label status, special handling, etc."></textarea>
+            </label>
+          </form>
+
+          <aside class="action-panel" aria-label="Generated actions">
+            <div class="section-title">
+              <h3>Actions</h3>
+              <span id="savedNotice" class="saved-notice" aria-live="polite"></span>
+            </div>
+
+            <div class="button-grid">
+              <button class="primary-button" id="openPortal">Open portal</button>
+              <button class="secondary-button" id="copySummary">Copy summary</button>
+              <button class="secondary-button" id="draftEmail">Draft email</button>
+              <button class="secondary-button" id="saveLog">Save log</button>
+            </div>
+
+            <div class="output-block">
+              <div class="output-heading">
+                <h4>Carrier checklist</h4>
+                <button class="ghost-button small" id="copyChecklist">Copy</button>
+              </div>
+              <ol id="checklist"></ol>
+            </div>
+
+            <div class="output-block">
+              <div class="output-heading">
+                <h4>Email draft</h4>
+                <button class="ghost-button small" id="copyEmail">Copy</button>
+              </div>
+              <textarea id="emailDraft" rows="9" spellcheck="true"></textarea>
+            </div>
+          </aside>
+        </div>
+
+        <section class="history-panel" aria-label="Task log">
+          <div class="section-title">
+            <h3>Recent log</h3>
+            <button type="button" class="ghost-button" id="clearLog">Clear log</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
