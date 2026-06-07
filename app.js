@@ -616,8 +616,10 @@ function updatePickupDateDisplay() {
   const selectedDate = form.elements.readyDate.value;
   pickupDateLabel.textContent = formatUpsDate(selectedDate);
   dateChoiceButtons.forEach((button) => {
-    const choiceDate = button.dataset.dateChoice === "nextWorkday" ? nextWorkday() : defaultPickupDate();
-    button.classList.toggle("active", selectedDate === choiceDate);
+    const choiceDate = button.dataset.dateChoice === "nextWorkday" ? nextWorkday() : today();
+    const active = selectedDate === choiceDate;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
   });
 }
 
