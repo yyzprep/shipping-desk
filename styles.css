@@ -49,10 +49,10 @@ button {
 .simple-shell {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
-  max-width: 1180px;
+  gap: 12px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 18px;
+  padding: 16px;
 }
 
 .sidebar {
@@ -75,7 +75,7 @@ button {
   grid-template-columns: 48px 1fr;
   gap: 12px;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .brand-mark {
@@ -129,7 +129,7 @@ h1 {
 }
 
 .carrier-panel {
-  padding: 12px;
+  padding: 10px;
 }
 
 .panel-heading,
@@ -182,9 +182,9 @@ h1 {
 
 .carrier-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .carrier-section-title {
@@ -203,10 +203,10 @@ h1 {
 
 .carrier-button {
   display: grid;
-  grid-template-columns: 36px 1fr auto;
-  gap: 10px;
+  grid-template-columns: 32px 1fr;
+  gap: 8px;
   align-items: center;
-  min-height: 58px;
+  min-height: 54px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -223,8 +223,8 @@ h1 {
 .carrier-logo {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   color: #fff;
   font-size: 12px;
@@ -233,25 +233,19 @@ h1 {
 
 .carrier-name {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .carrier-note {
-  display: block;
+  display: none;
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
 }
 
 .carrier-status {
-  align-self: center;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 900;
+  display: none;
 }
 
 .carrier-button.active .carrier-status {
@@ -399,8 +393,8 @@ textarea:focus {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 12px;
   align-items: start;
 }
 
@@ -420,18 +414,13 @@ textarea:focus {
 }
 
 .simple-options {
-  grid-template-columns: minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
   gap: 12px;
 }
 
 .carrier-expanded-slot {
-  grid-column: 1 / -1;
-  margin-top: -4px;
-  margin-bottom: 4px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fbfcfb;
+  display: none;
 }
 
 .carrier-expanded-slot .simple-options {
@@ -444,13 +433,6 @@ textarea:focus {
   box-shadow: none;
 }
 
-.carrier-expanded-slot .form-panel,
-.carrier-expanded-slot .action-panel {
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-
 .simple-options .action-panel {
   position: static;
 }
@@ -458,7 +440,7 @@ textarea:focus {
 .form-panel,
 .action-panel,
 .history-panel {
-  padding: 16px;
+  padding: 14px;
 }
 
 .form-panel {
@@ -468,8 +450,8 @@ textarea:focus {
 
 .preset-panel {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid #cfd9d4;
   border-radius: 8px;
   background: #f7faf8;
@@ -543,7 +525,7 @@ textarea:focus {
 }
 
 .pickup-window-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(140px, 0.8fr) minmax(140px, 0.8fr);
+  grid-template-columns: minmax(160px, 1fr) minmax(180px, 1fr) minmax(160px, 0.9fr) minmax(128px, 0.75fr) minmax(128px, 0.75fr);
 }
 
 .choice-control {
@@ -600,14 +582,14 @@ label {
 
 .simple-options .action-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   align-items: start;
 }
 
 .button-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .primary-button,
@@ -620,7 +602,6 @@ label {
 }
 
 .primary-button {
-  grid-column: span 2;
   border: 1px solid var(--green);
   background: var(--green);
   color: #fff;
@@ -666,7 +647,7 @@ label {
 }
 
 .simple-options .output-block {
-  min-height: 100%;
+  min-height: auto;
 }
 
 .output-heading h4 {
@@ -826,7 +807,7 @@ pre {
   }
 
   .carrier-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .action-panel {
@@ -852,6 +833,7 @@ pre {
   .field-grid.two,
   .package-grid,
   .pickup-window-grid,
+  .simple-options,
   .pickup-summary,
   .button-grid {
     grid-template-columns: 1fr;
@@ -862,11 +844,11 @@ pre {
   }
 
   .carrier-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .carrier-button {
-    grid-template-columns: 36px 1fr;
+    grid-template-columns: 32px 1fr;
   }
 
   .carrier-status {

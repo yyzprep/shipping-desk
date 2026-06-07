@@ -257,6 +257,7 @@ const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
 const referenceField = document.querySelector("#referenceField");
 const referenceLabel = document.querySelector("#referenceLabel");
+const optionsTitle = document.querySelector("#optionsTitle");
 const pickupAddressLabel = document.querySelector("#pickupAddressLabel");
 const destinationAddressLabel = document.querySelector("#destinationAddressLabel");
 const upsPresetPanel = document.querySelector("#upsPresetPanel");
@@ -475,10 +476,6 @@ function applyShipSavvyPreset() {
 }
 
 function renderCarriers() {
-  if (activeOptions && activeOptions.parentElement?.id === "activeCarrierSlot") {
-    simpleWorkspace.insertBefore(activeOptions, historyPanel);
-  }
-
   carrierList.innerHTML = "";
   carrierSections.forEach((section) => {
     const sectionCarriers = Object.entries(carriers).filter(([, carrier]) => carrier.section === section.id);
@@ -504,22 +501,8 @@ function renderCarriers() {
         <span class="carrier-status">${active ? "Selected" : "Choose"}</span>
       `;
       carrierList.append(button);
-      if (active) {
-        const slot = document.createElement("div");
-        slot.id = "activeCarrierSlot";
-        slot.className = "carrier-expanded-slot";
-        carrierList.append(slot);
-      }
     });
   });
-  placeActiveCarrierOptions();
-}
-
-function placeActiveCarrierOptions() {
-  const slot = document.querySelector("#activeCarrierSlot");
-  if (slot && activeOptions) {
-    slot.append(activeOptions);
-  }
 }
 
 function taskCopy() {
@@ -540,6 +523,7 @@ function renderHeader() {
   referenceLabel.textContent = isCarrierPickupPreset() ? "Pickup confirmation" : "Reference / order";
   form.elements.reference.placeholder = isCarrierPickupPreset() ? "Add after booking" : "Order 1842";
   referenceField.hidden = isCarrierPickupPreset();
+  optionsTitle.textContent = state.carrier === "shipsavvy" ? "Order details" : "Pickup details";
   pickupAddressLabel.textContent = state.carrier === "shipsavvy" ? "Business / warehouse address" : "Pickup address";
   destinationAddressLabel.textContent = state.carrier === "shipsavvy" ? "Delivery address" : "Destination address";
 }
@@ -775,9 +759,9 @@ function renderOutputs() {
   upsOutputBlock.hidden = !showUpsPreset;
   purolatorPresetPanel.hidden = !showPurolatorPreset;
   purolatorOutputBlock.hidden = !showPurolatorPreset;
-  checklistBlock.hidden = isCarrierPickupPreset();
-  emailOutputBlock.hidden = isCarrierPickupPreset();
-  draftEmailButton.hidden = isCarrierPickupPreset();
+  checklistBlock.hidden = true;
+  emailOutputBlock.hidden = true;
+  draftEmailButton.hidden = true;
   document.querySelector("#openPortal").textContent = state.task === "pickup"
     ? `Prepare ${carriers[state.carrier].name} pickup`
     : state.task === "shipment"
