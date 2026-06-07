@@ -3,13 +3,18 @@ const UPS_DEFAULTS = {
   contactName: "YYZ PREP",
   email: "hello@yyzprep.ca",
   telephone: "6472500111",
+  addressLine1: "25 NEWKIRK CT",
   addressLine2: "Unit 5",
   addressLine3: "Floor",
+  city: "BRAMPTON",
+  province: "Ontario",
+  postalCode: "L6Z0B5",
   packages: "30",
   service: "UPS Standard",
   preferredLocation: "Warehouse",
   overweight: "No",
-  prePrintedLabels: "Yes"
+  prePrintedLabels: "Yes",
+  classicReason: "Missing features in the new app"
 };
 
 function setNativeValue(element, value) {
@@ -43,9 +48,27 @@ function textIncludes(element, label) {
   return element.textContent.trim().toLowerCase().includes(label.toLowerCase());
 }
 
+function isVisible(element) {
+  if (!element) return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0;
+}
+
 function fieldNear(label, selector = "input, textarea, select") {
+  const attributeMatch = [...document.querySelectorAll(selector)]
+    .find((field) => {
+      const text = [
+        field.getAttribute("aria-label"),
+        field.getAttribute("placeholder"),
+        field.name,
+        field.id
+      ].filter(Boolean).join(" ").toLowerCase();
+      return isVisible(field) && text.includes(label.toLowerCase());
+    });
+  if (attributeMatch) return attributeMatch;
+
   const labels = [...document.querySelectorAll("label, legend, span, div, td, th, p")]
-    .filter((element) => textIncludes(element, label));
+    .filter((element) => isVisible(element) && textIncludes(element, label));
   for (const element of labels) {
     const forId = element.getAttribute("for");
     if (forId) {
@@ -89,7 +112,7 @@ function clickByText(patterns) {
   const controls = [...document.querySelectorAll("button, a, input[type='button'], input[type='submit']")];
   const target = controls.find((control) => {
     const text = visibleText(control).toLowerCase();
-    return patterns.some((pattern) => text.includes(pattern.toLowerCase()));
+    return isVisible(control) && patterns.some((pattern) => text.includes(pattern.toLowerCase()));
   });
   if (!target) return false;
   target.click();
@@ -98,9 +121,6 @@ function clickByText(patterns) {
 
 function clearUpsOverlays() {
   clickByText(["Accept All Cookies", "Essential Cookies Only"]);
-  const closeButton = [...document.querySelectorAll("button")]
-    .find((button) => visibleText(button) === "×" || visibleText(button).toLowerCase() === "close");
-  if (closeButton) closeButton.click();
 }
 
 function switchToClassicView() {
@@ -109,18 +129,35 @@ function switchToClassicView() {
 
 function confirmClassicView() {
   const modal = [...document.querySelectorAll("[role='dialog'], .modal, .ups-modal, .overlay, .modal-content")]
-    .find((element) => visibleText(element).toLowerCase().includes("classic"));
+    .find((element) => isVisible(element) && visibleText(element).toLowerCase().includes("classic"));
+  if (modal) {
+    const reasonSelect = [...modal.querySelectorAll("select")][0];
+    chooseSelect(reasonSelect, UPS_DEFAULTS.classicReason);
+    const reasonText = [...modal.querySelectorAll("textarea, input:not([type='hidden']):not([type='button']):not([type='submit'])")]
+      .find((field) => {
+        const text = [
+          field.getAttribute("aria-label"),
+          field.getAttribute("placeholder")
+        ].filter(Boolean).join(" ").toLowerCase();
+        return text.includes("reason") || text.includes("details");
+      });
+    setNativeValue(reasonText, "Need classic pickup notes and pickup location fields.");
+  }
   const controls = modal
     ? [...modal.querySelectorAll("button, a, input[type='button']")]
     : [...document.querySelectorAll("button, a, input[type='button']")]
         .filter((control) => visibleText(control).toLowerCase().includes("classic"));
   const target = controls.find((control) => {
     const text = visibleText(control).toLowerCase();
-    return ["continue", "confirm", "yes", "use classic"].some((pattern) => text.includes(pattern));
+    return isVisible(control) && ["proceed", "continue", "confirm", "yes", "use classic"].some((pattern) => text.includes(pattern));
   });
   if (!target) return false;
   target.click();
   return true;
+}
+
+function isClassicPickupPage() {
+  return location.href.includes("client=IPR") || textIncludes(document.body, "Enter Pickup Information");
 }
 
 function fillText(label, value) {
@@ -130,6 +167,63 @@ function fillText(label, value) {
 
 function fillSelect(label, value) {
   return chooseSelect(fieldNear(label, "select"), value);
+}
+
+function setTextById(id, value) {
+  return setNativeValue(document.getElementById(id), value);
+}
+
+function selectById(id, value) {
+  return chooseSelect(document.getElementById(id), value);
+}
+
+function clickById(id) {
+  const field = document.getElementById(id);
+  if (!field) return false;
+  field.click();
+  return true;
+}
+
+function setClassicTime(prefix, timeValue) {
+  if (!timeValue) return false;
+  const [hourText, minuteText = "00"] = timeValue.split(":");
+  let hour = Number(hourText);
+  const meridiem = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  const hourId = prefix === "ready" ? "readyHours" : "closeHours";
+  const minuteId = prefix === "ready" ? "readyMinutes" : "closeMinutes";
+  const amId = prefix === "ready" ? "readyAMId" : "closeAMId";
+  const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
+  selectById(hourId, String(hour));
+  selectById(minuteId, minuteText);
+  clickById(meridiem === "PM" ? pmId : amId);
+  return true;
+}
+
+function fillClassicUpsPickup(booking, instruction) {
+  clickById("radioShippingY");
+  setTextById("addrMDCompanyId", UPS_DEFAULTS.companyName);
+  setTextById("addrMDCustNameId", UPS_DEFAULTS.contactName);
+  setTextById("addressId", UPS_DEFAULTS.addressLine1);
+  setTextById("addrMDRoomId", UPS_DEFAULTS.addressLine2);
+  setTextById("addrMDFloorId", UPS_DEFAULTS.addressLine3);
+  setTextById("pd2Id", UPS_DEFAULTS.city);
+  selectById("pd1", UPS_DEFAULTS.province);
+  setTextById("postalcode", UPS_DEFAULTS.postalCode);
+  setTextById("addrMDPhoneId", UPS_DEFAULTS.telephone);
+  selectById("dtotalpkgs", UPS_DEFAULTS.packages);
+  clickById("radioWeight70N");
+  selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
+  setClassicTime("ready", booking.readyTime);
+  setClassicTime("close", booking.closeTime);
+  selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
+  setTextById("spInstrId", instruction);
+}
+
+function formatClassicDateValue(dateValue) {
+  if (!dateValue) return "";
+  const [year, month, day] = dateValue.split("-");
+  return `${year}${String(Number(month) - 1).padStart(2, "0")}${day}`;
 }
 
 function fillTime(label, timeValue) {
@@ -159,6 +253,7 @@ function fillUpsPickup(booking) {
   const instruction = `SPIKE pickup request for ${skids} skids`;
 
   clearUpsOverlays();
+  fillClassicUpsPickup(booking, instruction);
   clickNear("pre-printed UPS Shipping Labels", UPS_DEFAULTS.prePrintedLabels);
   fillText("Company or Name", UPS_DEFAULTS.companyName);
   fillText("Company", UPS_DEFAULTS.companyName);
@@ -167,9 +262,12 @@ function fillUpsPickup(booking) {
   fillText("Telephone", UPS_DEFAULTS.telephone);
   fillText("Phone Number", UPS_DEFAULTS.telephone);
   fillText("Email", UPS_DEFAULTS.email);
-  fillText("Street Address", "25 NEWKIRK CT");
-  fillText("City", "BRAMPTON");
-  fillText("Zip Code", "L6Z0B5");
+  fillText("Street Address", UPS_DEFAULTS.addressLine1);
+  fillText("Address Line 1", UPS_DEFAULTS.addressLine1);
+  fillText("City", UPS_DEFAULTS.city);
+  fillSelect("Province", UPS_DEFAULTS.province);
+  fillText("Zip Code", UPS_DEFAULTS.postalCode);
+  fillText("Postal Code", UPS_DEFAULTS.postalCode);
   fillText("Address Line 2", UPS_DEFAULTS.addressLine2);
   fillText("Apartment, Suite", UPS_DEFAULTS.addressLine2);
   fillText("Address Line 3", UPS_DEFAULTS.addressLine3);
@@ -190,18 +288,23 @@ function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
 
   clearUpsOverlays();
-  if (switchToClassicView()) {
+  if (!isClassicPickupPage() && switchToClassicView()) {
     window.setTimeout(confirmClassicView, 700);
     window.setTimeout(confirmClassicView, 1600);
-  } else {
+    window.setTimeout(confirmClassicView, 3000);
+  } else if (!isClassicPickupPage()) {
     confirmClassicView();
   }
 
   let attempts = 0;
   const fillTimer = window.setInterval(() => {
     attempts += 1;
-    fillUpsPickup(booking);
-    if (attempts >= 12) window.clearInterval(fillTimer);
+    if (!isClassicPickupPage()) {
+      confirmClassicView();
+    } else {
+      fillUpsPickup(booking);
+    }
+    if (attempts >= 20) window.clearInterval(fillTimer);
   }, 1000);
 }
 

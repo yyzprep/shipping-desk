@@ -4,11 +4,11 @@ const carriers = {
     short: "UPS",
     section: "parcel",
     color: "#7a4b21",
-    portal: "https://wwwapps.ups.com/pickup/schedule?loc=en_CA",
+    portal: "https://wwwapps.ups.com/pickup/schedule?loc=en_CA&client=IPR",
     note: "Pickup and shipment portal",
     checklist: {
       pickup: [
-        "Click Prepare UPS pickup.",
+        "Click Submit pickup.",
         "Confirm the UPS form matches the booking values.",
         "Stop on the UPS review or payment page before submitting.",
         "After staff manually submits and UPS accepts it, click Mark booked."
