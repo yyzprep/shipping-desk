@@ -4,5 +4,10 @@ window.addEventListener("message", (event) => {
 
   chrome.storage.local.set({
     shippingDeskPendingBooking: event.data.booking
+  }, () => {
+    window.postMessage({
+      type: "SHIPPING_DESK_BOOKING_SAVED",
+      requestId: event.data.requestId
+    }, "*");
   });
 });

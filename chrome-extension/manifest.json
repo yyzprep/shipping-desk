@@ -9,6 +9,7 @@
     "http://localhost/*",
     "http://127.0.0.1/*",
     "https://www.ups.com/*",
+    "https://wwwapps.ups.com/*",
     "https://eshiponline.purolator.com/*",
     "https://shipsavvy.com/*",
     "https://my.shipsavvy.com/*",
@@ -26,7 +27,10 @@
       "js": ["content-app.js"]
     },
     {
-      "matches": ["https://www.ups.com/*"],
+      "matches": [
+        "https://www.ups.com/*",
+        "https://wwwapps.ups.com/*"
+      ],
       "js": ["content-ups.js"],
       "run_at": "document_idle"
     },

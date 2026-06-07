@@ -1003,13 +1003,34 @@ function savePickupEntry(entry) {
   return entry;
 }
 
-function startPickupBooking() {
+function saveBookingForExtension(entry) {
+  const requestId = makeId();
+  return new Promise((resolve) => {
+    let resolved = false;
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      window.removeEventListener("message", onMessage);
+      resolve();
+    };
+    const onMessage = (event) => {
+      if (event.source !== window) return;
+      if (event.data?.type !== "SHIPPING_DESK_BOOKING_SAVED") return;
+      if (event.data.requestId !== requestId) return;
+      done();
+    };
+
+    window.addEventListener("message", onMessage);
+    window.postMessage({ type: "SHIPPING_DESK_BOOKING", requestId, booking: entry }, "*");
+    window.setTimeout(done, 700);
+  });
+}
+
+async function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
-  window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
   flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
-  window.setTimeout(() => {
-    window.location.href = entry.bookingUrl;
-  }, 100);
+  await saveBookingForExtension(entry);
+  window.location.href = entry.bookingUrl;
 }
 
 function markBookingConfirmed() {
