@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.2";
+const HELPER_VERSION = "0.2.3";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -284,7 +284,7 @@ function setClassicTime(prefix, timeValue) {
   const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
   selectById(hourId, String(hour));
   selectById(minuteId, String(Number(minuteText)));
-  clickById(meridiem === "PM" ? pmId : amId);
+  checkById(meridiem === "PM" ? pmId : amId);
   return true;
 }
 
@@ -344,7 +344,11 @@ function fillUpsPickup(booking) {
   const instruction = `SPIKE pickup request for ${skids} skids`;
 
   clearUpsOverlays();
-  const standardSelected = fillClassicUpsPickup(booking, instruction);
+  if (isClassicPickupPage()) {
+    return fillClassicUpsPickup(booking, instruction);
+  }
+
+  const standardSelected = false;
   clickNear("pre-printed UPS Shipping Labels", UPS_DEFAULTS.prePrintedLabels);
   fillText("Company or Name", UPS_DEFAULTS.companyName);
   fillText("Company", UPS_DEFAULTS.companyName);
