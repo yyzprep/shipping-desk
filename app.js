@@ -2,6 +2,7 @@ const carriers = {
   ups: {
     name: "UPS",
     short: "UPS",
+    section: "parcel",
     color: "#7a4b21",
     portal: "https://www.ups.com/ca/en/business-solutions/pickup-dropoff-options/schedule-pickup.page",
     note: "Pickup and shipment portal",
@@ -26,8 +27,9 @@ const carriers = {
     }
   },
   purolator: {
-    name: "Purolator",
-    short: "Puro",
+    name: "Purelator",
+    short: "Pure",
+    section: "parcel",
     color: "#225ca8",
     portal: "https://www.purolator.com/en/shipping/pickup-and-dropoff",
     note: "Pickup, labels, tracking",
@@ -54,6 +56,7 @@ const carriers = {
   shipsavvy: {
     name: "ShipSavvy",
     short: "SS",
+    section: "parcel",
     color: "#176b55",
     portal: "https://shipsavvy.com/",
     note: "Create shipments",
@@ -77,33 +80,93 @@ const carriers = {
       ]
     }
   },
-  other: {
-    name: "Other",
-    short: "Any",
-    color: "#b56a16",
-    portal: "https://www.google.com/search?q=carrier+pickup+booking",
-    note: "Generic workflow",
+  canadaPost: {
+    name: "Canada Post",
+    short: "CP",
+    section: "parcel",
+    color: "#d3222a",
+    portal: "https://www.canadapost-postescanada.ca/cpc/en/commercial/pickup-deposit-delivery/schedule-pickup.page",
+    note: "Business pickup and labels",
     checklist: {
       pickup: [
-        "Open the carrier portal.",
-        "Copy the structured pickup and package details into the carrier form.",
-        "Submit after checking the time window and address.",
-        "Save the confirmation details in the log."
+        "Open Canada Post business pickup scheduling.",
+        "Confirm pickup address, contact, ready time, close time, package count, and service.",
+        "Check that labels or manifests are ready before the pickup window.",
+        "Save the pickup confirmation or manifest details in the log."
       ],
       shipment: [
-        "Open the carrier shipment page.",
-        "Enter origin, destination, package, service, and billing details.",
-        "Create the label or shipment reference.",
-        "Save tracking in the log and draft the email."
+        "Open Canada Post shipping tools.",
+        "Enter destination, package details, service level, and business account details.",
+        "Create the label or manifest, then add tracking to notes.",
+        "Save the log and draft the recipient email."
       ],
       email: [
-        "Review the generated email.",
-        "Add carrier-specific references.",
+        "Review the generated Canada Post email.",
+        "Add tracking, manifest, or pickup confirmation details if available.",
+        "Open the draft and send after review."
+      ]
+    }
+  },
+  abCourier: {
+    name: "AB Courier",
+    short: "AB",
+    section: "ltl",
+    color: "#263c73",
+    portal: "https://www.abcourier.com/",
+    note: "LTL and courier freight",
+    checklist: {
+      pickup: [
+        "Open AB Courier and confirm the pickup or order booking flow.",
+        "Confirm pickup address, dock details, contact, freight count, and pickup window.",
+        "Include vehicle or LTL requirements in notes before submitting.",
+        "Save the order or pickup reference in the log."
+      ],
+      shipment: [
+        "Open AB Courier and start the shipment/order workflow.",
+        "Enter shipper, consignee, freight pieces, weight, dimensions, and service details.",
+        "Confirm accessorials such as tailgate, appointment, dock, or inside pickup if needed.",
+        "Save the order/tracking reference and draft the notification email."
+      ],
+      email: [
+        "Review the generated AB Courier freight update.",
+        "Add order, pickup, tracking, or appointment details if available.",
+        "Open the draft and send after review."
+      ]
+    }
+  },
+  freightera: {
+    name: "Freightera",
+    short: "FR",
+    section: "ltl",
+    color: "#b56a16",
+    portal: "https://www.freightera.com/",
+    note: "LTL freight marketplace",
+    checklist: {
+      pickup: [
+        "Open Freightera and find the booked freight shipment.",
+        "Confirm pickup address, freight pieces, weight, dimensions, and pickup date.",
+        "Check accessorials such as tailgate, residential, appointment, or limited access.",
+        "Save the carrier pickup or booking reference in the log."
+      ],
+      shipment: [
+        "Open Freightera and quote or book an LTL shipment.",
+        "Enter origin, destination, pallet/piece count, weight, dimensions, and accessorials.",
+        "Compare rates, select the carrier/service, and book after review.",
+        "Save booking, BOL, and tracking details before drafting the email."
+      ],
+      email: [
+        "Review the generated Freightera freight update.",
+        "Add booking, BOL, pickup, or tracking details if available.",
         "Open the draft and send after review."
       ]
     }
   }
 };
+
+const carrierSections = [
+  { id: "parcel", label: "Parcel" },
+  { id: "ltl", label: "LTL" }
+];
 
 const state = {
   carrier: "ups",
@@ -165,19 +228,29 @@ function carrierPortal() {
 
 function renderCarriers() {
   carrierList.innerHTML = "";
-  Object.entries(carriers).forEach(([id, carrier]) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `carrier-button ${id === state.carrier ? "active" : ""}`;
-    button.dataset.carrier = id;
-    button.innerHTML = `
-      <span class="carrier-logo" style="background:${carrier.color}">${carrier.short}</span>
-      <span>
-        <span class="carrier-name">${carrier.name}</span>
-        <span class="carrier-note">${carrier.note}</span>
-      </span>
-    `;
-    carrierList.append(button);
+  carrierSections.forEach((section) => {
+    const sectionCarriers = Object.entries(carriers).filter(([, carrier]) => carrier.section === section.id);
+    if (!sectionCarriers.length) return;
+
+    const heading = document.createElement("div");
+    heading.className = "carrier-section-title";
+    heading.textContent = section.label;
+    carrierList.append(heading);
+
+    sectionCarriers.forEach(([id, carrier]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `carrier-button ${id === state.carrier ? "active" : ""}`;
+      button.dataset.carrier = id;
+      button.innerHTML = `
+        <span class="carrier-logo" style="background:${carrier.color}">${carrier.short}</span>
+        <span>
+          <span class="carrier-name">${carrier.name}</span>
+          <span class="carrier-note">${carrier.note}</span>
+        </span>
+      `;
+      carrierList.append(button);
+    });
   });
 }
 
