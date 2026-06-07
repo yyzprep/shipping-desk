@@ -1030,9 +1030,14 @@ function saveBookingForExtension(entry) {
 
 async function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
+  const bookingTab = window.open("about:blank", "_blank");
   flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
   await saveBookingForExtension(entry);
-  window.location.href = entry.bookingUrl;
+  if (bookingTab) {
+    bookingTab.location.href = entry.bookingUrl;
+    return;
+  }
+  flash("Popup blocked. Allow popups for this page, then submit again.");
 }
 
 function markBookingConfirmed() {
