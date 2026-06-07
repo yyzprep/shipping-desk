@@ -17,6 +17,9 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
+let upsAutomationTimer = null;
+let upsAutomationStarted = false;
+
 function setNativeValue(element, value) {
   if (!element || value === undefined || value === null) return false;
   const win = element.ownerDocument?.defaultView || window;
@@ -201,17 +204,30 @@ function clickControl(control) {
   return true;
 }
 
+function serviceText(element) {
+  const labelledBy = element.getAttribute?.("aria-labelledby");
+  const labelText = labelledBy
+    ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ")
+    : "";
+  const explicitLabel = element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent || "" : "";
+  return [
+    visibleText(element),
+    element.id,
+    element.name,
+    element.value,
+    element.getAttribute?.("for"),
+    element.getAttribute?.("aria-label"),
+    labelText,
+    explicitLabel,
+    element.closest?.("label, li, div")?.textContent
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
 function clickLabelOrControlByText(patterns, root = document) {
   const controls = [...root.querySelectorAll("input[type='checkbox'], input[type='radio'], button, label, a")]
     .filter(isVisible);
   const target = controls.find((control) => {
-    const text = [
-      visibleText(control),
-      control.id,
-      control.name,
-      control.value,
-      control.getAttribute("for")
-    ].filter(Boolean).join(" ").toLowerCase();
+    const text = serviceText(control);
     return patterns.some((pattern) => text.includes(pattern.toLowerCase()));
   });
   if (!target) return false;
@@ -224,22 +240,13 @@ function clickLabelOrControlByText(patterns, root = document) {
 function selectUpsStandardService() {
   clickControl(document.getElementById("domSrvButtonId"));
   clickLabelOrControlByText(["UPS Domestic Services", "domSrvButtonId"], document.getElementById("srvModuleDiv") || document);
+  const serviceRoot = document.getElementById("domSrvDiv") || document.getElementById("srvModuleDiv") || document;
   return clickLabelOrControlByText([
     "UPS Standard",
     "Standard",
     "UPS Standard®",
     "Ground"
-  ], document.getElementById("srvModuleDiv") || document);
-}
-
-function forceEnableById(ids) {
-  ids.forEach((id) => {
-    const field = document.getElementById(id);
-    if (field?.disabled) {
-      field.disabled = false;
-      field.removeAttribute("disabled");
-    }
-  });
+  ], serviceRoot);
 }
 
 function setClassicTime(prefix, timeValue) {
@@ -269,24 +276,7 @@ function fillClassicUpsPickup(booking, instruction) {
   selectById("pd1", UPS_DEFAULTS.province);
   setTextById("postalcode", UPS_DEFAULTS.postalCode);
   setTextById("addrMDPhoneId", UPS_DEFAULTS.telephone);
-  selectUpsStandardService();
-  forceEnableById([
-    "dtotalpkgs",
-    "radioWeight70Y",
-    "radioWeight70N",
-    "pickupdate",
-    "readyHours",
-    "readyMinutes",
-    "readyAMId",
-    "readyPMId",
-    "closeHours",
-    "closeMinutes",
-    "closeAMId",
-    "closePMId",
-    "pickuppoint",
-    "pickupReferenceId",
-    "spInstrId"
-  ]);
+  const standardSelected = selectUpsStandardService();
   selectById("dtotalpkgs", UPS_DEFAULTS.packages);
   clickById("radioWeight70N");
   selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
@@ -294,6 +284,7 @@ function fillClassicUpsPickup(booking, instruction) {
   setClassicTime("close", booking.closeTime);
   selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
   setTextById("spInstrId", instruction);
+  return standardSelected;
 }
 
 function formatClassicDateValue(dateValue) {
@@ -329,7 +320,7 @@ function fillUpsPickup(booking) {
   const instruction = `SPIKE pickup request for ${skids} skids`;
 
   clearUpsOverlays();
-  fillClassicUpsPickup(booking, instruction);
+  const standardSelected = fillClassicUpsPickup(booking, instruction);
   clickNear("pre-printed UPS Shipping Labels", UPS_DEFAULTS.prePrintedLabels);
   fillText("Company or Name", UPS_DEFAULTS.companyName);
   fillText("Company", UPS_DEFAULTS.companyName);
@@ -358,10 +349,15 @@ function fillUpsPickup(booking) {
   fillTime("Latest Preferred Pickup Time", booking.closeTime);
   fillSelect("Preferred Pickup Location", UPS_DEFAULTS.preferredLocation);
   fillText("Special Instructions", instruction);
+  return standardSelected;
 }
 
 function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
+  if (upsAutomationStarted && upsAutomationTimer) {
+    window.clearInterval(upsAutomationTimer);
+  }
+  upsAutomationStarted = true;
 
   clearUpsOverlays();
   if (!isClassicPickupPage() && switchToClassicView()) {
@@ -373,15 +369,25 @@ function runUpsAutomation(booking) {
   }
 
   let attempts = 0;
-  const fillTimer = window.setInterval(() => {
+  upsAutomationTimer = window.setInterval(() => {
     attempts += 1;
     if (!isClassicPickupPage()) {
       confirmClassicView();
     } else {
-      fillUpsPickup(booking);
+      const standardSelected = fillUpsPickup(booking);
+      updateHelperStatus(standardSelected ? "UPS Standard selected" : "Waiting for UPS Standard service options");
+      if (standardSelected && attempts >= 3) {
+        window.clearInterval(upsAutomationTimer);
+      }
     }
-    if (attempts >= 20) window.clearInterval(fillTimer);
-  }, 1000);
+    if (attempts >= 8) window.clearInterval(upsAutomationTimer);
+  }, 1800);
+}
+
+function updateHelperStatus(message) {
+  const panel = document.querySelector("#shipping-desk-helper");
+  const small = panel?.querySelector("small");
+  if (small) small.textContent = message;
 }
 
 function bookingFromWindowName() {
