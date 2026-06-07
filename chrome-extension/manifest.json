@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Shipping Desk Helper",
+  "version": "0.1.0",
+  "description": "Carries Shipping Desk pickup details into carrier booking pages.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://yyzprep.github.io/shipping-desk/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://www.ups.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://yyzprep.github.io/shipping-desk/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content-app.js"]
+    },
+    {
+      "matches": ["https://www.ups.com/*"],
+      "js": ["content-ups.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

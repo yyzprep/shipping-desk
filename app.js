@@ -8,10 +8,10 @@ const carriers = {
     note: "Pickup and shipment portal",
     checklist: {
       pickup: [
-        "Open UPS pickup scheduling.",
-        "Confirm pickup address, contact, ready time, close time, package count, and total weight.",
-        "Submit only after the generated summary matches the portal form.",
-        "Paste the confirmation number into notes, then save the log."
+        "Click Book UPS pickup.",
+        "Confirm the UPS form matches the booking values.",
+        "Continue to the UPS review or payment page.",
+        "After UPS accepts it, click Mark booked."
       ],
       shipment: [
         "Open UPS shipping.",
@@ -35,10 +35,10 @@ const carriers = {
     note: "Pickup booking portal",
     checklist: {
       pickup: [
-        "Open Purolator pickup booking and sign in if needed.",
+        "Click Book Purolator pickup and sign in if needed.",
         "Select the pickup date and pickup window.",
         "Book the pickup using the saved YYZ PREP address defaults.",
-        "Log the pickup after booking."
+        "After Purolator accepts it, click Mark booked."
       ],
       shipment: [
         "Open Purolator shipping tools.",
@@ -62,10 +62,10 @@ const carriers = {
     note: "Create shipments",
     checklist: {
       pickup: [
-        "Open ShipSavvy and choose the relevant carrier or shipment.",
+        "Click Book ShipSavvy pickup and choose the relevant carrier or shipment.",
         "Confirm pickup location, package count, and pickup window.",
         "Book the pickup or attach the carrier pickup reference.",
-        "Save the log with the shipment or pickup reference."
+        "After ShipSavvy accepts it, click Mark booked."
       ],
       shipment: [
         "Open ShipSavvy and start a new shipment.",
@@ -89,10 +89,10 @@ const carriers = {
     note: "Business pickup and labels",
     checklist: {
       pickup: [
-        "Open Canada Post business pickup scheduling.",
+        "Click Book Canada Post pickup.",
         "Confirm pickup address, contact, ready time, close time, package count, and service.",
         "Check that labels or manifests are ready before the pickup window.",
-        "Save the pickup confirmation or manifest details in the log."
+        "After Canada Post accepts it, click Mark booked."
       ],
       shipment: [
         "Open Canada Post shipping tools.",
@@ -116,10 +116,10 @@ const carriers = {
     note: "LTL and courier freight",
     checklist: {
       pickup: [
-        "Open AB Courier and confirm the pickup or order booking flow.",
+        "Click Book AB Courier pickup and confirm the pickup or order booking flow.",
         "Confirm pickup address, dock details, contact, freight count, and pickup window.",
         "Include vehicle or LTL requirements in notes before submitting.",
-        "Save the order or pickup reference in the log."
+        "After AB Courier accepts it, click Mark booked."
       ],
       shipment: [
         "Open AB Courier and start the shipment/order workflow.",
@@ -143,10 +143,10 @@ const carriers = {
     note: "LTL freight marketplace",
     checklist: {
       pickup: [
-        "Open Freightera and find the booked freight shipment.",
+        "Click Book Freightera pickup and find the booked freight shipment.",
         "Confirm pickup address, freight pieces, weight, dimensions, and pickup date.",
         "Check accessorials such as tailgate, residential, appointment, or limited access.",
-        "Save the carrier pickup or booking reference in the log."
+        "After Freightera accepts it, click Mark booked."
       ],
       shipment: [
         "Open Freightera and quote or book an LTL shipment.",
@@ -231,7 +231,8 @@ const state = {
 
 const storageKeys = {
   history: "shippingDesk.history",
-  templates: "shippingDesk.templates"
+  templates: "shippingDesk.templates",
+  activeBooking: "shippingDesk.activeBooking"
 };
 
 const form = document.querySelector("#shippingForm");
@@ -242,6 +243,7 @@ const historyPanel = document.querySelector(".history-panel");
 const checklist = document.querySelector("#checklist");
 const emailDraft = document.querySelector("#emailDraft");
 const historyList = document.querySelector("#historyList");
+const pickupSummary = document.querySelector("#pickupSummary");
 const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
 const referenceField = document.querySelector("#referenceField");
@@ -260,6 +262,10 @@ const saveLogButton = document.querySelector("#saveLog");
 const pickupDateLabel = document.querySelector("#pickupDateLabel");
 const dateChoiceButtons = document.querySelectorAll("[data-date-choice]");
 const timeWindowButtons = document.querySelectorAll("[data-window-start][data-window-end]");
+
+function makeId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -736,8 +742,11 @@ function renderOutputs() {
   checklistBlock.hidden = isCarrierPickupPreset();
   emailOutputBlock.hidden = isCarrierPickupPreset();
   draftEmailButton.hidden = isCarrierPickupPreset();
-  copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy summary";
-  saveLogButton.textContent = isCarrierPickupPreset() ? "Log pickup" : "Save log";
+  document.querySelector("#openPortal").textContent = state.task === "pickup"
+    ? `Book ${carriers[state.carrier].name} pickup`
+    : `Open ${carriers[state.carrier].name}`;
+  copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy booking info";
+  saveLogButton.textContent = state.task === "pickup" ? "Mark booked" : "Save log";
   document.querySelectorAll(".generic-fields").forEach((element) => {
     element.hidden = isCarrierPickupPreset();
   });
@@ -766,55 +775,155 @@ function openEmailDraft() {
   window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
-function saveLogEntry() {
+function bookingStatus(entry) {
+  if (entry.status === "picked-up" || entry.status === "completed") return "picked-up";
+  if (entry.status === "needs-rebook") return "needs-rebook";
+  if (entry.pickupDate && entry.pickupDate < today()) return "missed";
+  return entry.status || "booking";
+}
+
+function statusLabel(status) {
+  const labels = {
+    booking: "Booking started",
+    booked: "Booked",
+    missed: "Missed",
+    "needs-rebook": "Needs rebook",
+    "picked-up": "Picked up"
+  };
+  return labels[status] || "Booked";
+}
+
+function statusClass(status) {
+  return status.replace(/[^a-z0-9]+/g, "-");
+}
+
+function formatPickupWindow(entry) {
+  return [
+    entry.pickupDate || "No date",
+    entry.readyTime || "",
+    "to",
+    entry.closeTime || ""
+  ].filter(Boolean).join(" ");
+}
+
+function createPickupEntry(status = "booking") {
   const data = formData();
-  const history = getStore(storageKeys.history);
-  const pickupStatus = data.readyDate && data.readyDate < today() ? "completed" : "scheduled";
-  history.unshift({
-    id: crypto.randomUUID(),
+  const carrierName = carriers[state.carrier].name;
+  const notes = isUpsPickup()
+    ? data.upsSpecialInstructions || upsInstructionText()
+    : isPurolatorPickup()
+      ? "Purolator pickup"
+      : data.notes || "";
+
+  return {
+    id: makeId(),
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     task: state.task,
     carrier: state.carrier,
-    status: pickupStatus,
+    carrierName,
+    status,
     reference: data.reference || "No confirmation yet",
     recipient: data.recipient || data.contactName || upsPreset.companyName || "No recipient",
     pickupDate: data.readyDate || "",
     readyTime: data.readyTime || "",
     closeTime: data.closeTime || "",
     skids: data.skids || "",
-    notes: isUpsPickup()
-      ? data.upsSpecialInstructions || upsInstructionText()
-      : isPurolatorPickup()
-        ? "Purolator pickup"
-        : data.notes || "",
-    summary: presetCopyText()
-  });
+    notes,
+    summary: presetCopyText(),
+    bookingUrl: carrierPortal()
+  };
+}
+
+function savePickupEntry(entry) {
+  const history = getStore(storageKeys.history).filter((item) => item.id !== entry.id);
+  history.unshift(entry);
   setStore(storageKeys.history, history.slice(0, 30));
+  localStorage.setItem(storageKeys.activeBooking, JSON.stringify(entry));
   renderHistory();
-  flash("Pickup logged");
+  return entry;
+}
+
+function startPickupBooking() {
+  const entry = savePickupEntry(createPickupEntry("booking"));
+  window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
+  window.open(entry.bookingUrl, "_blank", "noopener");
+  flash(`${carriers[state.carrier].name} booking started`);
+}
+
+function markBookingConfirmed() {
+  let activeBooking = null;
+  try {
+    activeBooking = JSON.parse(localStorage.getItem(storageKeys.activeBooking));
+  } catch {
+    activeBooking = null;
+  }
+
+  const history = getStore(storageKeys.history);
+  const existing = activeBooking && history.find((entry) => entry.id === activeBooking.id);
+  const entry = existing
+    ? { ...existing, status: "booked", updatedAt: new Date().toISOString(), summary: presetCopyText() }
+    : createPickupEntry("booked");
+
+  savePickupEntry(entry);
+  flash("Pickup marked booked");
+}
+
+function renderPickupSummary(history) {
+  if (!pickupSummary) return;
+
+  const liveEntries = history.filter((entry) => bookingStatus(entry) !== "picked-up");
+  const todayEntries = liveEntries.filter((entry) => entry.pickupDate === today());
+  const upcomingEntries = liveEntries.filter((entry) => entry.pickupDate > today());
+  const attentionEntries = liveEntries.filter((entry) => ["missed", "needs-rebook"].includes(bookingStatus(entry)));
+  const pickedUpEntries = history.filter((entry) => bookingStatus(entry) === "picked-up");
+
+  pickupSummary.innerHTML = `
+    <div class="summary-stat">
+      <strong>${todayEntries.length}</strong>
+      <span>Today</span>
+    </div>
+    <div class="summary-stat">
+      <strong>${upcomingEntries.length}</strong>
+      <span>Upcoming</span>
+    </div>
+    <div class="summary-stat ${attentionEntries.length ? "attention" : ""}">
+      <strong>${attentionEntries.length}</strong>
+      <span>Needs attention</span>
+    </div>
+    <div class="summary-stat">
+      <strong>${pickedUpEntries.length}</strong>
+      <span>Picked up</span>
+    </div>
+  `;
 }
 
 function renderHistory() {
   const history = getStore(storageKeys.history);
+  renderPickupSummary(history);
   historyList.innerHTML = "";
 
   if (!history.length) {
-    historyList.innerHTML = `<p class="carrier-note">No saved tasks yet.</p>`;
+    historyList.innerHTML = `<p class="carrier-note">No pickups booked yet. Click Book pickup to start one.</p>`;
     return;
   }
 
   const groups = [
     {
       label: "Today",
-      entries: history.filter((entry) => entry.status !== "completed" && entry.pickupDate === today())
+      entries: history.filter((entry) => bookingStatus(entry) !== "picked-up" && bookingStatus(entry) !== "missed" && entry.pickupDate === today())
     },
     {
       label: "Upcoming",
-      entries: history.filter((entry) => entry.status !== "completed" && entry.pickupDate !== today())
+      entries: history.filter((entry) => bookingStatus(entry) !== "picked-up" && bookingStatus(entry) !== "missed" && entry.pickupDate > today())
     },
     {
-      label: "Completed",
-      entries: history.filter((entry) => entry.status === "completed")
+      label: "Needs attention",
+      entries: history.filter((entry) => ["missed", "needs-rebook"].includes(bookingStatus(entry)))
+    },
+    {
+      label: "Picked up",
+      entries: history.filter((entry) => bookingStatus(entry) === "picked-up")
     }
   ];
 
@@ -829,18 +938,19 @@ function renderHistory() {
     const item = document.createElement("div");
     item.className = "history-item";
     const date = new Date(entry.createdAt).toLocaleString();
-      const pickupWindow = [entry.pickupDate || "No date", entry.readyTime || "", "to", entry.closeTime || ""].filter(Boolean).join(" ");
+      const status = bookingStatus(entry);
+      const pickupWindow = formatPickupWindow(entry);
       const skids = entry.skids ? ` · ${entry.skids} skids` : "";
     item.innerHTML = `
       <div>
           <strong>${carriers[entry.carrier]?.name || entry.carrier} pickup: ${pickupWindow}${skids}</strong>
-          <span>${entry.reference} · ${entry.notes || "No instructions"} · logged ${date}</span>
+          <span><span class="status-chip ${statusClass(status)}">${statusLabel(status)}</span> ${entry.reference} · ${entry.notes || "No instructions"} · updated ${date}</span>
         </div>
         <div class="history-actions">
           <button class="ghost-button small" data-copy-log="${entry.id}">Copy</button>
-          <button class="ghost-button small" data-toggle-status="${entry.id}">
-            ${entry.status === "completed" ? "Reopen" : "Complete"}
-          </button>
+          <button class="ghost-button small" data-set-status="${entry.id}" data-status="booked">Booked</button>
+          <button class="ghost-button small" data-set-status="${entry.id}" data-status="picked-up">Picked up</button>
+          <button class="ghost-button small" data-set-status="${entry.id}" data-status="needs-rebook">Rebook</button>
       </div>
     `;
     historyList.append(item);
@@ -931,20 +1041,21 @@ dateChoiceButtons.forEach((button) => {
 timeWindowButtons.forEach((button) => {
   button.addEventListener("click", () => setPickupWindow(button.dataset.windowStart, button.dataset.windowEnd));
 });
-document.querySelector("#openPortal").addEventListener("click", () => window.open(carrierPortal(), "_blank", "noopener"));
+document.querySelector("#openPortal").addEventListener("click", startPickupBooking);
 document.querySelector("#copySummary").addEventListener("click", () => copyText(presetCopyText(), presetCopyLabel()));
 document.querySelector("#copyChecklist").addEventListener("click", () => copyText([...checklist.children].map((li, index) => `${index + 1}. ${li.textContent}`).join("\n"), "Checklist"));
 document.querySelector("#copyUpsValues").addEventListener("click", () => copyText(buildUpsValues(), "UPS values"));
 document.querySelector("#copyPurolatorValues").addEventListener("click", () => copyText(buildPurolatorValues(), "Purolator values"));
 document.querySelector("#copyEmail").addEventListener("click", () => copyText(emailDraft.value, "Email"));
 document.querySelector("#draftEmail").addEventListener("click", openEmailDraft);
-document.querySelector("#saveLog").addEventListener("click", saveLogEntry);
+document.querySelector("#saveLog").addEventListener("click", markBookingConfirmed);
 document.querySelector("#saveTemplate").addEventListener("click", saveTemplate);
 document.querySelector("#clearForm").addEventListener("click", clearForm);
 document.querySelector("#clearLog").addEventListener("click", () => {
   localStorage.removeItem(storageKeys.history);
+  localStorage.removeItem(storageKeys.activeBooking);
   renderHistory();
-  flash("Log cleared");
+  flash("Summary cleared");
 });
 templateSelect.addEventListener("change", () => loadTemplate(templateSelect.value));
 historyList.addEventListener("click", (event) => {
@@ -955,13 +1066,14 @@ historyList.addEventListener("click", (event) => {
     return;
   }
 
-  const statusButton = event.target.closest("[data-toggle-status]");
+  const statusButton = event.target.closest("[data-set-status]");
   if (!statusButton) return;
   const history = getStore(storageKeys.history).map((entry) => {
-    if (entry.id !== statusButton.dataset.toggleStatus) return entry;
+    if (entry.id !== statusButton.dataset.setStatus) return entry;
     return {
       ...entry,
-      status: entry.status === "completed" ? "scheduled" : "completed"
+      status: statusButton.dataset.status,
+      updatedAt: new Date().toISOString()
     };
   });
   setStore(storageKeys.history, history);

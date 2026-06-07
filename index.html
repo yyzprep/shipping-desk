@@ -252,10 +252,10 @@
             </div>
 
             <div class="button-grid">
-              <button class="primary-button" id="openPortal">Open portal</button>
-              <button class="secondary-button" id="copySummary">Copy summary</button>
+              <button class="primary-button" id="openPortal">Book pickup</button>
+              <button class="secondary-button" id="copySummary">Copy booking info</button>
               <button class="secondary-button" id="draftEmail">Draft email</button>
-              <button class="secondary-button" id="saveLog">Log pickup</button>
+              <button class="secondary-button" id="saveLog">Mark booked</button>
             </div>
 
             <div class="output-block" id="checklistBlock">
@@ -298,11 +298,12 @@
           </aside>
         </div>
 
-        <section class="history-panel" aria-label="Task log">
+        <section class="history-panel" aria-label="Pickup summary">
           <div class="section-title">
-            <h3>Pickup log</h3>
-            <button type="button" class="ghost-button" id="clearLog">Clear log</button>
+            <h3>Pickup summary</h3>
+            <button type="button" class="ghost-button" id="clearLog">Clear summary</button>
           </div>
+          <div id="pickupSummary" class="pickup-summary"></div>
           <div id="historyList" class="history-list"></div>
         </section>
       </section>
