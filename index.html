@@ -185,6 +185,11 @@
               </label>
             </div>
 
+            <div class="inline-submit">
+              <button type="button" class="primary-button" id="openPortal">Submit pickup</button>
+              <span id="savedNotice" class="saved-notice" aria-live="polite"></span>
+            </div>
+
             <div class="field-grid two generic-fields" id="contactFields">
               <label>
                 <span>Pickup contact</span>
@@ -245,18 +250,10 @@
             </label>
           </form>
 
-          <aside class="action-panel" aria-label="Generated actions">
-            <div class="section-title">
-              <h3>Submit</h3>
-              <span id="savedNotice" class="saved-notice" aria-live="polite"></span>
-            </div>
-
-            <div class="button-grid">
-              <button class="primary-button" id="openPortal">Submit pickup</button>
-              <button class="secondary-button" id="copySummary">Copy booking info</button>
-              <button class="secondary-button" id="draftEmail">Draft email</button>
-              <button class="secondary-button" id="saveLog">Mark booked</button>
-            </div>
+          <div class="utility-panel" aria-hidden="true">
+            <button class="secondary-button" id="copySummary" type="button">Copy booking info</button>
+            <button class="secondary-button" id="draftEmail" type="button">Draft email</button>
+            <button class="secondary-button" id="saveLog" type="button">Mark booked</button>
 
             <div class="output-block" id="checklistBlock">
               <div class="output-heading">
@@ -295,7 +292,7 @@
               </div>
               <textarea id="emailDraft" rows="9" spellcheck="true"></textarea>
             </div>
-          </aside>
+          </div>
         </div>
 
         <section class="history-panel" aria-label="Shipping summary">

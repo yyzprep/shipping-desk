@@ -403,7 +403,7 @@ textarea:focus {
 .content-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 0;
   align-items: start;
 }
 
@@ -425,7 +425,7 @@ textarea:focus {
 .simple-options {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 0;
 }
 
 .details-card {
@@ -441,23 +441,16 @@ textarea:focus {
 }
 
 .simple-options .form-panel,
-.simple-options .action-panel,
 .history-panel {
   box-shadow: none;
 }
 
-.form-panel,
-.action-panel {
+.form-panel {
   border: 0;
   background: transparent;
 }
 
-.simple-options .action-panel {
-  position: static;
-}
-
 .form-panel,
-.action-panel,
 .history-panel {
   padding: 0;
 }
@@ -593,26 +586,11 @@ label {
   font-weight: 700;
 }
 
-.action-panel {
-  position: static;
-  display: grid;
-  gap: 10px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.simple-options .action-panel {
+.inline-submit {
   display: grid;
   grid-template-columns: 1fr;
-  align-items: start;
-}
-
-.button-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
+  gap: 6px;
+  padding-top: 2px;
 }
 
 .primary-button,
@@ -636,10 +614,6 @@ label {
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
-}
-
-.action-panel .section-title {
-  display: none;
 }
 
 .ghost-button {
@@ -843,14 +817,6 @@ pre {
 
   .carrier-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .action-panel {
-    position: static;
-  }
-
-  .simple-options .action-panel {
-    grid-template-columns: 1fr;
   }
 
   .route-visual {

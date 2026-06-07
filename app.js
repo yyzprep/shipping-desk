@@ -4,7 +4,7 @@ const carriers = {
     short: "UPS",
     section: "parcel",
     color: "#7a4b21",
-    portal: "https://www.ups.com/ca/en/business-solutions/pickup-dropoff-options/schedule-pickup.page",
+    portal: "https://wwwapps.ups.com/pickup/schedule?loc=en_CA",
     note: "Pickup and shipment portal",
     checklist: {
       pickup: [
@@ -874,8 +874,10 @@ function savePickupEntry(entry) {
 function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
-  window.open(entry.bookingUrl, "_blank", "noopener");
   flash(`${carriers[state.carrier].name} ${state.task === "shipment" ? "order" : "pickup"} prepared for review`);
+  window.setTimeout(() => {
+    window.location.href = entry.bookingUrl;
+  }, 100);
 }
 
 function markBookingConfirmed() {
