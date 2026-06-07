@@ -18,6 +18,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -393,6 +397,35 @@ textarea:focus {
   line-height: 1.4;
 }
 
+.advanced-defaults {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.advanced-defaults summary {
+  color: var(--green);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.advanced-defaults[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.side-details {
+  display: grid;
+  gap: 10px;
+}
+
+.side-details summary {
+  color: var(--green);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -401,6 +434,10 @@ textarea:focus {
 
 .field-grid.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pickup-grid {
+  grid-template-columns: minmax(140px, 220px);
 }
 
 label {

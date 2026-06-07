@@ -241,6 +241,7 @@ const emailDraft = document.querySelector("#emailDraft");
 const historyList = document.querySelector("#historyList");
 const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
+const referenceField = document.querySelector("#referenceField");
 const referenceLabel = document.querySelector("#referenceLabel");
 const upsPresetPanel = document.querySelector("#upsPresetPanel");
 const upsOutputBlock = document.querySelector("#upsOutputBlock");
@@ -249,6 +250,7 @@ const purolatorPresetPanel = document.querySelector("#purolatorPresetPanel");
 const purolatorOutputBlock = document.querySelector("#purolatorOutputBlock");
 const purolatorValues = document.querySelector("#purolatorValues");
 const emailOutputBlock = document.querySelector("#emailOutputBlock");
+const checklistBlock = document.querySelector("#checklistBlock");
 const draftEmailButton = document.querySelector("#draftEmail");
 const copySummaryButton = document.querySelector("#copySummary");
 const saveLogButton = document.querySelector("#saveLog");
@@ -356,7 +358,24 @@ function applyUpsPreset() {
   if (form.elements.skids && !form.elements.skids.value) {
     form.elements.skids.value = "2";
   }
+  syncUpsAdvancedDefaults();
   syncUpsInstructions();
+}
+
+function syncUpsAdvancedDefaults() {
+  const mappings = [
+    ["advancedPreferredLocation", "preferredLocation"],
+    ["advancedUpsPackages", "upsPackages"],
+    ["advancedUpsService", "upsService"]
+  ];
+
+  mappings.forEach(([advancedId, hiddenName]) => {
+    const advancedField = document.querySelector(`#${advancedId}`);
+    const hiddenField = form.elements[hiddenName];
+    if (!advancedField || !hiddenField) return;
+    if (!advancedField.value) advancedField.value = hiddenField.value;
+    hiddenField.value = advancedField.value;
+  });
 }
 
 function syncUpsInstructions() {
@@ -444,6 +463,7 @@ function renderHeader() {
   document.querySelector("#statusPill").textContent = `${carriers[state.carrier].name} selected`;
   referenceLabel.textContent = isCarrierPickupPreset() ? "Pickup confirmation" : "Reference / order";
   form.elements.reference.placeholder = isCarrierPickupPreset() ? "Add after booking" : "Order 1842";
+  referenceField.hidden = isCarrierPickupPreset();
 }
 
 function renderChecklist() {
@@ -640,6 +660,7 @@ function renderOutputs() {
   upsOutputBlock.hidden = !showUpsPreset;
   purolatorPresetPanel.hidden = !showPurolatorPreset;
   purolatorOutputBlock.hidden = !showPurolatorPreset;
+  checklistBlock.hidden = isCarrierPickupPreset();
   emailOutputBlock.hidden = isCarrierPickupPreset();
   draftEmailButton.hidden = isCarrierPickupPreset();
   copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy summary";
@@ -821,6 +842,12 @@ document.querySelectorAll(".segment").forEach((button) => {
 });
 
 form.addEventListener("input", (event) => {
+  if (state.carrier === "ups" && event.target.id?.startsWith("advancedUps")) {
+    syncUpsAdvancedDefaults();
+  }
+  if (state.carrier === "ups" && event.target.id === "advancedPreferredLocation") {
+    syncUpsAdvancedDefaults();
+  }
   if (state.carrier === "ups" && event.target.name === "skids") {
     syncUpsInstructions();
   }

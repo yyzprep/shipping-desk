@@ -70,86 +70,94 @@
               <button type="button" class="ghost-button" id="clearForm">Clear</button>
             </div>
 
-            <section class="preset-panel" id="upsPresetPanel" aria-label="UPS preset details">
+            <section class="preset-panel" id="upsPresetPanel" aria-label="UPS preset details" hidden>
               <div class="section-title">
-                <h3>UPS preset</h3>
+                <h3>UPS pickup</h3>
                 <span class="preset-badge">YYZ PREP</span>
               </div>
-              <div class="field-grid package-grid">
+              <div class="field-grid pickup-grid">
                 <label>
                   <span>Skids</span>
                   <input id="skids" name="skids" type="number" min="1" value="2">
                 </label>
-                <label>
-                  <span>Preferred pickup location</span>
-                  <input id="preferredLocation" name="preferredLocation" value="Warehouse">
-                </label>
-                <label>
-                  <span>UPS packages</span>
-                  <input id="upsPackages" name="upsPackages" type="number" min="1" value="30">
-                </label>
-                <label>
-                  <span>UPS service</span>
-                  <input id="upsService" name="upsService" value="UPS Standard®">
-                </label>
               </div>
-              <label>
-                <span>UPS special instructions</span>
-                <textarea id="upsSpecialInstructions" name="upsSpecialInstructions" rows="2"></textarea>
-              </label>
+              <input id="preferredLocation" name="preferredLocation" type="hidden" value="Warehouse">
+              <input id="upsPackages" name="upsPackages" type="hidden" value="30">
+              <input id="upsService" name="upsService" type="hidden" value="UPS Standard®">
+              <input id="upsSpecialInstructions" name="upsSpecialInstructions" type="hidden">
+              <details class="advanced-defaults">
+                <summary>Advanced defaults</summary>
+                <div class="field-grid package-grid">
+                  <label>
+                    <span>Preferred pickup location</span>
+                    <input id="advancedPreferredLocation" value="Warehouse">
+                  </label>
+                  <label>
+                    <span>UPS packages</span>
+                    <input id="advancedUpsPackages" type="number" min="1" value="30">
+                  </label>
+                  <label>
+                    <span>UPS service</span>
+                    <input id="advancedUpsService" value="UPS Standard®">
+                  </label>
+                </div>
+              </details>
             </section>
 
-            <section class="preset-panel" id="purolatorPresetPanel" aria-label="Purolator preset details">
+            <section class="preset-panel" id="purolatorPresetPanel" aria-label="Purolator preset details" hidden>
               <div class="section-title">
-                <h3>Purolator preset</h3>
+                <h3>Purolator pickup</h3>
                 <span class="preset-badge">YYZ PREP</span>
               </div>
-              <div class="field-grid package-grid">
-                <label>
-                  <span>Company/Name</span>
-                  <input id="purolatorCompany" name="purolatorCompany" value="YYZ PREP">
-                </label>
-                <label>
-                  <span>Contact name</span>
-                  <input id="purolatorContact" name="purolatorContact" value="ALT">
-                </label>
-                <label>
-                  <span>Postal code</span>
-                  <input id="purolatorPostal" name="purolatorPostal" value="L6Z 0B5">
-                </label>
-                <label>
-                  <span>Phone</span>
-                  <input id="purolatorPhone" name="purolatorPhone" value="647 2500111">
-                </label>
-              </div>
-              <div class="field-grid package-grid">
-                <label>
-                  <span>Street number</span>
-                  <input id="purolatorStreetNumber" name="purolatorStreetNumber" value="25">
-                </label>
-                <label>
-                  <span>Street name</span>
-                  <input id="purolatorStreetName" name="purolatorStreetName" value="NEWKIRK">
-                </label>
-                <label>
-                  <span>Street type</span>
-                  <input id="purolatorStreetType" name="purolatorStreetType" value="Court">
-                </label>
-                <label>
-                  <span>Suite #</span>
-                  <input id="purolatorSuite" name="purolatorSuite" value="5">
-                </label>
-              </div>
               <p class="preset-note">When Purolator shows Address Finder Validation, click Ignore. It returns to Edit Address, then click Save.</p>
+              <details class="advanced-defaults">
+                <summary>Address defaults</summary>
+                <div class="field-grid package-grid">
+                  <label>
+                    <span>Company/Name</span>
+                    <input id="purolatorCompany" name="purolatorCompany" value="YYZ PREP">
+                  </label>
+                  <label>
+                    <span>Contact name</span>
+                    <input id="purolatorContact" name="purolatorContact" value="ALT">
+                  </label>
+                  <label>
+                    <span>Postal code</span>
+                    <input id="purolatorPostal" name="purolatorPostal" value="L6Z 0B5">
+                  </label>
+                  <label>
+                    <span>Phone</span>
+                    <input id="purolatorPhone" name="purolatorPhone" value="647 2500111">
+                  </label>
+                </div>
+                <div class="field-grid package-grid">
+                  <label>
+                    <span>Street number</span>
+                    <input id="purolatorStreetNumber" name="purolatorStreetNumber" value="25">
+                  </label>
+                  <label>
+                    <span>Street name</span>
+                    <input id="purolatorStreetName" name="purolatorStreetName" value="NEWKIRK">
+                  </label>
+                  <label>
+                    <span>Street type</span>
+                    <input id="purolatorStreetType" name="purolatorStreetType" value="Court">
+                  </label>
+                  <label>
+                    <span>Suite #</span>
+                    <input id="purolatorSuite" name="purolatorSuite" value="5">
+                  </label>
+                </div>
+              </details>
             </section>
 
-            <div class="field-grid">
-              <label>
+            <div class="field-grid pickup-window-grid">
+              <label id="referenceField">
                 <span id="referenceLabel">Reference / order</span>
                 <input id="reference" name="reference" placeholder="Order 1842">
               </label>
               <label>
-                <span>Ready date</span>
+                <span>Pickup date</span>
                 <input id="readyDate" name="readyDate" type="date">
               </label>
               <label>
@@ -157,7 +165,7 @@
                 <input id="readyTime" name="readyTime" type="time">
               </label>
               <label>
-                <span>Close time</span>
+                <span>Closing time</span>
                 <input id="closeTime" name="closeTime" type="time">
               </label>
             </div>
@@ -235,7 +243,7 @@
               <button class="secondary-button" id="saveLog">Log pickup</button>
             </div>
 
-            <div class="output-block">
+            <div class="output-block" id="checklistBlock">
               <div class="output-heading">
                 <h4>Carrier checklist</h4>
                 <button class="ghost-button small" id="copyChecklist">Copy</button>
@@ -243,20 +251,26 @@
               <ol id="checklist"></ol>
             </div>
 
-            <div class="output-block" id="upsOutputBlock">
+            <div class="output-block" id="upsOutputBlock" hidden>
               <div class="output-heading">
                 <h4>UPS booking values</h4>
                 <button class="ghost-button small" id="copyUpsValues">Copy</button>
               </div>
-              <pre id="upsValues"></pre>
+              <details class="side-details">
+                <summary>Show booking values</summary>
+                <pre id="upsValues"></pre>
+              </details>
             </div>
 
-            <div class="output-block" id="purolatorOutputBlock">
+            <div class="output-block" id="purolatorOutputBlock" hidden>
               <div class="output-heading">
                 <h4>Purolator booking values</h4>
                 <button class="ghost-button small" id="copyPurolatorValues">Copy</button>
               </div>
-              <pre id="purolatorValues"></pre>
+              <details class="side-details">
+                <summary>Show booking values</summary>
+                <pre id="purolatorValues"></pre>
+              </details>
             </div>
 
             <div class="output-block" id="emailOutputBlock">
