@@ -17,6 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
+const HELPER_VERSION = "0.2.0";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -401,6 +402,86 @@ function updateHelperStatus(message) {
   if (small) small.textContent = message;
 }
 
+function upsDebugSnapshot(booking) {
+  const serviceRoot = document.getElementById("domSrvDiv");
+  const serviceControls = [...document.querySelectorAll("#srvModuleDiv input, #srvModuleDiv select, #srvModuleDiv button, #srvModuleDiv label")]
+    .map((element) => ({
+      tag: element.tagName,
+      type: element.type || "",
+      id: element.id || "",
+      name: element.name || "",
+      value: element.value || "",
+      text: visibleText(element).slice(0, 120),
+      disabled: Boolean(element.disabled),
+      checked: Boolean(element.checked)
+    }));
+  const fields = [
+    "radioShippingY",
+    "trkNbrAreaId",
+    "addrMDCompanyId",
+    "addrMDCustNameId",
+    "addressId",
+    "addrMDRoomId",
+    "addrMDFloorId",
+    "pd2Id",
+    "pd1",
+    "postalcode",
+    "addrMDPhoneId",
+    "dtotalpkgs",
+    "selectedServices",
+    "pickupdate",
+    "readyHours",
+    "readyMinutes",
+    "readyAMId",
+    "readyPMId",
+    "closeHours",
+    "closeMinutes",
+    "closeAMId",
+    "closePMId",
+    "pickuppoint",
+    "spInstrId"
+  ].map((id) => {
+    const element = document.getElementById(id);
+    return {
+      id,
+      exists: Boolean(element),
+      value: element?.value || "",
+      disabled: Boolean(element?.disabled),
+      checked: Boolean(element?.checked)
+    };
+  });
+
+  return {
+    helperVersion: HELPER_VERSION,
+    url: location.href,
+    title: document.title,
+    hasBooking: Boolean(booking),
+    booking,
+    isClassicPickupPage: isClassicPickupPage(),
+    domSrvDivText: serviceRoot?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || "",
+    domSrvDivHtml: serviceRoot?.innerHTML?.slice(0, 1500) || "",
+    serviceControls,
+    fields,
+    visibleErrors: [...document.querySelectorAll("[id*=Error], .ups-error, .error, [role='alert']")]
+      .map((element) => ({
+        id: element.id || "",
+        text: element.textContent.trim().replace(/\s+/g, " ").slice(0, 250),
+        display: getComputedStyle(element).display
+      }))
+      .filter((item) => item.text && item.display !== "none")
+  };
+}
+
+function copyUpsDebug(booking) {
+  const text = JSON.stringify(upsDebugSnapshot(booking), null, 2);
+  navigator.clipboard?.writeText(text)
+    .then(() => updateHelperStatus("Copied UPS debug. Paste it to Codex."))
+    .catch(() => {
+      updateHelperStatus("Could not copy debug. Open console or screenshot the panel.");
+      console.log("Assistant Hub UPS debug", text);
+    });
+}
+
 function bookingFromWindowName() {
   if (!window.name?.startsWith("assistantHubBooking:")) return null;
   try {
@@ -430,9 +511,11 @@ function injectPanel(booking) {
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
-    <button type="button">${booking?.carrier === "ups" ? "Retry UPS fill" : "Assistant Hub loaded"}</button>
+    <strong>Assistant Hub Helper v${HELPER_VERSION}</strong>
+    <button type="button" data-ups-action="fill">${booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
+    <button type="button" data-ups-action="debug">Copy UPS debug</button>
     <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
-    <small>${booking?.carrier === "ups" ? "Fills known fields only. Stop before final submit/payment." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
+    <small>${booking?.carrier === "ups" ? "Manual mode: click Fill UPS once, then copy debug if Standard is missing." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -450,14 +533,22 @@ function injectPanel(booking) {
     "font:13px system-ui,sans-serif",
     "color:#172026"
   ].join(";");
-  panel.querySelector("button").style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
+  panel.querySelectorAll("button").forEach((button) => {
+    button.style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
+  });
+  panel.querySelector("strong").style.cssText = "font-size:12px;color:#63717b";
   panel.querySelector("small").style.cssText = "color:#63717b;line-height:1.35";
-  panel.querySelector("button").addEventListener("click", () => runUpsAutomation(booking));
+  panel.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-ups-action]");
+    if (!button) return;
+    if (button.dataset.upsAction === "fill") runUpsAutomation(booking);
+    if (button.dataset.upsAction === "debug") copyUpsDebug(booking);
+  });
   document.body.append(panel);
 }
 
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
   const pendingBooking = bookingFromUrl() || bookingFromWindowName() || shippingDeskPendingBooking;
   injectPanel(pendingBooking);
-  runUpsAutomation(pendingBooking);
+  updateHelperStatus("Loaded. Click Fill UPS once.");
 });
