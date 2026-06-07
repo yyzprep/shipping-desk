@@ -1031,6 +1031,9 @@ function saveBookingForExtension(entry) {
 async function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   const bookingTab = window.open("about:blank", "_blank");
+  if (bookingTab) {
+    bookingTab.name = `assistantHubBooking:${encodeURIComponent(JSON.stringify(entry))}`;
+  }
   flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
   await saveBookingForExtension(entry);
   if (bookingTab) {

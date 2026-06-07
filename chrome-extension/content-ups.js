@@ -19,15 +19,16 @@ const UPS_DEFAULTS = {
 
 function setNativeValue(element, value) {
   if (!element || value === undefined || value === null) return false;
-  const proto = element.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const win = element.ownerDocument?.defaultView || window;
+  const proto = element.tagName === "TEXTAREA"
+    ? win.HTMLTextAreaElement?.prototype || Object.getPrototypeOf(element)
+    : win.HTMLInputElement?.prototype || Object.getPrototypeOf(element);
   const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
-  if (descriptor?.set) {
-    descriptor.set.call(element, value);
-  } else {
-    element.value = value;
-  }
+  element.focus?.();
+  descriptor?.set ? descriptor.set.call(element, value) : element.setAttribute("value", value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
+  element.blur?.();
   return true;
 }
 
@@ -39,8 +40,14 @@ function chooseSelect(element, wanted) {
       || String(item.value).toLowerCase().includes(normalized);
   });
   if (!option) return false;
-  element.value = option.value;
+  const win = element.ownerDocument?.defaultView || window;
+  const descriptor = Object.getOwnPropertyDescriptor(win.HTMLSelectElement?.prototype || Object.getPrototypeOf(element), "value");
+  element.focus?.();
+  descriptor?.set ? descriptor.set.call(element, option.value) : element.setAttribute("value", option.value);
+  option.selected = true;
+  element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
+  element.blur?.();
   return true;
 }
 
@@ -308,6 +315,15 @@ function runUpsAutomation(booking) {
   }, 1000);
 }
 
+function bookingFromWindowName() {
+  if (!window.name?.startsWith("assistantHubBooking:")) return null;
+  try {
+    return JSON.parse(decodeURIComponent(window.name.replace("assistantHubBooking:", "")));
+  } catch {
+    return null;
+  }
+}
+
 function injectPanel(booking) {
   if (!booking || booking.carrier !== "ups" || document.querySelector("#shipping-desk-helper")) return;
 
@@ -341,6 +357,7 @@ function injectPanel(booking) {
 }
 
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
-  injectPanel(shippingDeskPendingBooking);
-  runUpsAutomation(shippingDeskPendingBooking);
+  const pendingBooking = bookingFromWindowName() || shippingDeskPendingBooking;
+  injectPanel(pendingBooking);
+  runUpsAutomation(pendingBooking);
 });
