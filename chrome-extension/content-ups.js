@@ -171,6 +171,19 @@ function isClassicPickupPage() {
   return location.href.includes("client=IPR") || textIncludes(document.body, "Enter Pickup Information");
 }
 
+function isUpsPaymentOrReviewPage() {
+  return location.pathname.includes("/pickup/processinfo")
+    || /select payment method|payment|review/i.test(document.title)
+    || textIncludes(document.body, "Select Payment Method");
+}
+
+function upsPageStage() {
+  if (isUpsPaymentOrReviewPage()) return "payment_or_review";
+  if (isClassicPickupPage()) return "pickup_entry";
+  if (textIncludes(document.body, "Use Classic App") || textIncludes(document.body, "Use Classic View")) return "modern_entry";
+  return "unknown";
+}
+
 function fillText(label, value) {
   const field = fieldNear(label, "input:not([type='radio']):not([type='checkbox']), textarea");
   return setNativeValue(field, value);
@@ -356,6 +369,10 @@ function fillUpsPickup(booking) {
 
 function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
+  if (isUpsPaymentOrReviewPage()) {
+    updateHelperStatus("Reached UPS payment/review page. Stop here and review before final submit.");
+    return;
+  }
   if (upsAutomationStarted && upsAutomationTimer) {
     window.clearTimeout(upsAutomationTimer);
   }
@@ -453,11 +470,14 @@ function upsDebugSnapshot(booking) {
 
   return {
     helperVersion: HELPER_VERSION,
+    pageStage: upsPageStage(),
     url: location.href,
     title: document.title,
     hasBooking: Boolean(booking),
     booking,
     isClassicPickupPage: isClassicPickupPage(),
+    isUpsPaymentOrReviewPage: isUpsPaymentOrReviewPage(),
+    bodyTextSample: document.body?.innerText?.trim().replace(/\s+/g, " ").slice(0, 1200) || "",
     domSrvDivText: serviceRoot?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || "",
     domSrvDivHtml: serviceRoot?.innerHTML?.slice(0, 1500) || "",
     serviceControls,
@@ -512,10 +532,10 @@ function injectPanel(booking) {
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
     <strong>Assistant Hub Helper v${HELPER_VERSION}</strong>
-    <button type="button" data-ups-action="fill">${booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
+    <button type="button" data-ups-action="fill">${isUpsPaymentOrReviewPage() ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
     <button type="button" data-ups-action="debug">Copy UPS debug</button>
     <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
-    <small>${booking?.carrier === "ups" ? "Manual mode: click Fill UPS once, then copy debug if Standard is missing." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
+    <small>${isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Manual mode: click Fill UPS once, then copy debug if Standard is missing." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -550,5 +570,5 @@ function injectPanel(booking) {
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
   const pendingBooking = bookingFromUrl() || bookingFromWindowName() || shippingDeskPendingBooking;
   injectPanel(pendingBooking);
-  updateHelperStatus("Loaded. Click Fill UPS once.");
+  updateHelperStatus(isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : "Loaded. Click Fill UPS once.");
 });
