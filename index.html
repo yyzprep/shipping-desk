@@ -99,6 +99,50 @@
               </label>
             </section>
 
+            <section class="preset-panel" id="purolatorPresetPanel" aria-label="Purolator preset details">
+              <div class="section-title">
+                <h3>Purolator preset</h3>
+                <span class="preset-badge">YYZ PREP</span>
+              </div>
+              <div class="field-grid package-grid">
+                <label>
+                  <span>Company/Name</span>
+                  <input id="purolatorCompany" name="purolatorCompany" value="YYZ PREP">
+                </label>
+                <label>
+                  <span>Contact name</span>
+                  <input id="purolatorContact" name="purolatorContact" value="ALT">
+                </label>
+                <label>
+                  <span>Postal code</span>
+                  <input id="purolatorPostal" name="purolatorPostal" value="L6Z 0B5">
+                </label>
+                <label>
+                  <span>Phone</span>
+                  <input id="purolatorPhone" name="purolatorPhone" value="647 2500111">
+                </label>
+              </div>
+              <div class="field-grid package-grid">
+                <label>
+                  <span>Street number</span>
+                  <input id="purolatorStreetNumber" name="purolatorStreetNumber" value="25">
+                </label>
+                <label>
+                  <span>Street name</span>
+                  <input id="purolatorStreetName" name="purolatorStreetName" value="NEWKIRK">
+                </label>
+                <label>
+                  <span>Street type</span>
+                  <input id="purolatorStreetType" name="purolatorStreetType" value="Court">
+                </label>
+                <label>
+                  <span>Suite #</span>
+                  <input id="purolatorSuite" name="purolatorSuite" value="5">
+                </label>
+              </div>
+              <p class="preset-note">When Purolator shows Address Finder Validation, click Ignore. It returns to Edit Address, then click Save.</p>
+            </section>
+
             <div class="field-grid">
               <label>
                 <span id="referenceLabel">Reference / order</span>
@@ -205,6 +249,14 @@
                 <button class="ghost-button small" id="copyUpsValues">Copy</button>
               </div>
               <pre id="upsValues"></pre>
+            </div>
+
+            <div class="output-block" id="purolatorOutputBlock">
+              <div class="output-heading">
+                <h4>Purolator booking values</h4>
+                <button class="ghost-button small" id="copyPurolatorValues">Copy</button>
+              </div>
+              <pre id="purolatorValues"></pre>
             </div>
 
             <div class="output-block" id="emailOutputBlock">

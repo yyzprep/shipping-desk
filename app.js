@@ -27,18 +27,18 @@ const carriers = {
     }
   },
   purolator: {
-    name: "Purelator",
-    short: "Pure",
+    name: "Purolator",
+    short: "Puro",
     section: "parcel",
     color: "#225ca8",
-    portal: "https://www.purolator.com/en/shipping/pickup-and-dropoff",
-    note: "Pickup, labels, tracking",
+    portal: "https://eshiponline.purolator.com/ShipOnline/pickup/SchedulePickup.aspx",
+    note: "Pickup booking portal",
     checklist: {
       pickup: [
-        "Open Purolator pickup and sign in if needed.",
-        "Use the ready date, ready time, close time, package count, and contact details from this page.",
-        "Check whether the shipment already has labels before submitting.",
-        "Save the pickup confirmation number in the log."
+        "Open Purolator pickup booking and sign in if needed.",
+        "Edit the pickup address using the Purolator booking values.",
+        "When Address Finder Validation appears, click Ignore.",
+        "After it returns to Edit Address, click Save, then finish booking the pickup and log the confirmation."
       ],
       shipment: [
         "Open Purolator shipping tools.",
@@ -199,6 +199,31 @@ const upsPreset = {
   personalizedMessage: ""
 };
 
+const purolatorPreset = {
+  companyName: "YYZ PREP",
+  contactName: "ALT",
+  country: "Canada",
+  postalCode: "L6Z 0B5",
+  city: "BRAMPTON",
+  province: "Ontario",
+  streetNumber: "25",
+  suffix: "",
+  streetName: "NEWKIRK",
+  streetType: "Court",
+  direction: "",
+  suite: "5",
+  floor: "",
+  entryCode: "",
+  address2: "",
+  address3: "",
+  phoneArea: "647",
+  phoneNumber: "2500111",
+  ext: "",
+  validationAddress: "25 NEWKIRK Court, Suite 5, BRAMPTON, Ontario, Canada, L6Z 0B5",
+  validationIssue: "Incorrect Street Name. NEWKIRK",
+  validationAction: "Click Ignore. Do not use Save Changes."
+};
+
 const state = {
   carrier: "ups",
   task: "pickup"
@@ -220,6 +245,9 @@ const referenceLabel = document.querySelector("#referenceLabel");
 const upsPresetPanel = document.querySelector("#upsPresetPanel");
 const upsOutputBlock = document.querySelector("#upsOutputBlock");
 const upsValues = document.querySelector("#upsValues");
+const purolatorPresetPanel = document.querySelector("#purolatorPresetPanel");
+const purolatorOutputBlock = document.querySelector("#purolatorOutputBlock");
+const purolatorValues = document.querySelector("#purolatorValues");
 const emailOutputBlock = document.querySelector("#emailOutputBlock");
 const draftEmailButton = document.querySelector("#draftEmail");
 const copySummaryButton = document.querySelector("#copySummary");
@@ -267,6 +295,18 @@ function carrierPortal() {
 
 function isUpsPickup() {
   return state.carrier === "ups" && state.task === "pickup";
+}
+
+function isPurolatorPickup() {
+  return state.carrier === "purolator" && state.task === "pickup";
+}
+
+function isCarrierPickupPreset() {
+  return isUpsPickup() || isPurolatorPickup();
+}
+
+function isPickupOnlyCarrier() {
+  return state.carrier === "ups" || state.carrier === "purolator";
 }
 
 function setTask(task) {
@@ -330,6 +370,35 @@ function syncUpsInstructions() {
   }
 }
 
+function applyPurolatorPreset() {
+  if (state.carrier !== "purolator") return;
+
+  const values = {
+    contactName: purolatorPreset.contactName,
+    phone: `${purolatorPreset.phoneArea}${purolatorPreset.phoneNumber}`,
+    pickupAddress: [
+      purolatorPreset.companyName,
+      `${purolatorPreset.streetNumber} ${purolatorPreset.streetName} ${purolatorPreset.streetType}`,
+      `Suite ${purolatorPreset.suite}`,
+      `${purolatorPreset.city}, ${purolatorPreset.province}, ${purolatorPreset.postalCode}`,
+      purolatorPreset.country
+    ].join("\n"),
+    purolatorCompany: purolatorPreset.companyName,
+    purolatorContact: purolatorPreset.contactName,
+    purolatorPostal: purolatorPreset.postalCode,
+    purolatorPhone: `${purolatorPreset.phoneArea} ${purolatorPreset.phoneNumber}`,
+    purolatorStreetNumber: purolatorPreset.streetNumber,
+    purolatorStreetName: purolatorPreset.streetName,
+    purolatorStreetType: purolatorPreset.streetType,
+    purolatorSuite: purolatorPreset.suite
+  };
+
+  Object.entries(values).forEach(([key, value]) => {
+    const field = form.elements[key];
+    if (field && !field.value) field.value = value;
+  });
+}
+
 function renderCarriers() {
   carrierList.innerHTML = "";
   carrierSections.forEach((section) => {
@@ -373,8 +442,8 @@ function renderHeader() {
   document.querySelector("#modeLabel").textContent = mode;
   document.querySelector("#taskTitle").textContent = title;
   document.querySelector("#statusPill").textContent = `${carriers[state.carrier].name} selected`;
-  referenceLabel.textContent = isUpsPickup() ? "Pickup confirmation" : "Reference / order";
-  form.elements.reference.placeholder = isUpsPickup() ? "Add after booking" : "Order 1842";
+  referenceLabel.textContent = isCarrierPickupPreset() ? "Pickup confirmation" : "Reference / order";
+  form.elements.reference.placeholder = isCarrierPickupPreset() ? "Add after booking" : "Order 1842";
 }
 
 function renderChecklist() {
@@ -452,6 +521,58 @@ function buildUpsValues() {
   ].join("\n");
 }
 
+function buildPurolatorValues() {
+  const data = formData();
+
+  return [
+    "Purolator pickup booking link",
+    carriers.purolator.portal,
+    "",
+    "Edit Address",
+    `Company/Name: ${data.purolatorCompany || purolatorPreset.companyName}`,
+    `Contact Name: ${data.purolatorContact || purolatorPreset.contactName}`,
+    `Country: ${purolatorPreset.country}`,
+    `Postal Code: ${data.purolatorPostal || purolatorPreset.postalCode}`,
+    `City: ${purolatorPreset.city}`,
+    `Province: ${purolatorPreset.province}`,
+    `Street Number: ${data.purolatorStreetNumber || purolatorPreset.streetNumber}`,
+    `Suffix: ${purolatorPreset.suffix}`,
+    `Street Name: ${data.purolatorStreetName || purolatorPreset.streetName}`,
+    `Street Type: ${data.purolatorStreetType || purolatorPreset.streetType}`,
+    `Direction: ${purolatorPreset.direction}`,
+    `Suite #: ${data.purolatorSuite || purolatorPreset.suite}`,
+    `Floor #: ${purolatorPreset.floor}`,
+    `Entry Code / Buzz #: ${purolatorPreset.entryCode}`,
+    `Address 2: ${purolatorPreset.address2}`,
+    `Address 3: ${purolatorPreset.address3}`,
+    `Phone Number: ${data.purolatorPhone || `${purolatorPreset.phoneArea} ${purolatorPreset.phoneNumber}`}`,
+    `Ext: ${purolatorPreset.ext}`,
+    "",
+    "Address Finder Validation",
+    `Validation address shown: ${purolatorPreset.validationAddress}`,
+    `Issue shown: ${purolatorPreset.validationIssue}`,
+    `Action: ${purolatorPreset.validationAction}`,
+    "Then, once back on Edit Address, click Save.",
+    "",
+    "Pickup Date and Time",
+    `Pickup Date: ${formatUpsDate(data.readyDate)}`,
+    `Ready Time: ${formatUpsTime(data.readyTime)}`,
+    `Close Time: ${formatUpsTime(data.closeTime)}`
+  ].join("\n");
+}
+
+function presetCopyText() {
+  if (isUpsPickup()) return buildUpsValues();
+  if (isPurolatorPickup()) return buildPurolatorValues();
+  return summaryText();
+}
+
+function presetCopyLabel() {
+  if (isUpsPickup()) return "UPS values";
+  if (isPurolatorPickup()) return "Purolator values";
+  return "Summary";
+}
+
 function summaryText() {
   const data = formData();
   const carrier = carriers[state.carrier].name;
@@ -502,30 +623,37 @@ function buildEmailDraft() {
 }
 
 function renderOutputs() {
-  if (state.carrier === "ups" && state.task !== "pickup") {
+  if (isPickupOnlyCarrier() && state.task !== "pickup") {
     setTask("pickup");
   }
   if (state.carrier === "ups") {
     applyUpsPreset();
   }
+  if (state.carrier === "purolator") {
+    applyPurolatorPreset();
+  }
   renderHeader();
   renderChecklist();
   const showUpsPreset = isUpsPickup();
+  const showPurolatorPreset = isPurolatorPickup();
   upsPresetPanel.hidden = !showUpsPreset;
   upsOutputBlock.hidden = !showUpsPreset;
-  emailOutputBlock.hidden = showUpsPreset;
-  draftEmailButton.hidden = showUpsPreset;
-  copySummaryButton.textContent = showUpsPreset ? "Copy UPS values" : "Copy summary";
-  saveLogButton.textContent = showUpsPreset ? "Log pickup" : "Save log";
+  purolatorPresetPanel.hidden = !showPurolatorPreset;
+  purolatorOutputBlock.hidden = !showPurolatorPreset;
+  emailOutputBlock.hidden = isCarrierPickupPreset();
+  draftEmailButton.hidden = isCarrierPickupPreset();
+  copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy summary";
+  saveLogButton.textContent = isCarrierPickupPreset() ? "Log pickup" : "Save log";
   document.querySelectorAll(".generic-fields").forEach((element) => {
-    element.hidden = showUpsPreset;
+    element.hidden = isCarrierPickupPreset();
   });
   document.querySelectorAll(".segment").forEach((button) => {
-    const disabled = state.carrier === "ups" && button.dataset.task !== "pickup";
+    const disabled = isPickupOnlyCarrier() && button.dataset.task !== "pickup";
     button.disabled = disabled;
     button.setAttribute("aria-disabled", String(disabled));
   });
   upsValues.textContent = showUpsPreset ? buildUpsValues() : "";
+  purolatorValues.textContent = showPurolatorPreset ? buildPurolatorValues() : "";
   emailDraft.value = buildEmailDraft();
 }
 
@@ -558,8 +686,12 @@ function saveLogEntry() {
     readyTime: data.readyTime || "",
     closeTime: data.closeTime || "",
     skids: data.skids || "",
-    notes: isUpsPickup() ? data.upsSpecialInstructions || upsInstructionText() : data.notes || "",
-    summary: isUpsPickup() ? buildUpsValues() : summaryText()
+    notes: isUpsPickup()
+      ? data.upsSpecialInstructions || upsInstructionText()
+      : isPurolatorPickup()
+        ? "Address validation: click Ignore, then Save."
+        : data.notes || "",
+    summary: presetCopyText()
   });
   setStore(storageKeys.history, history.slice(0, 30));
   renderHistory();
@@ -673,7 +805,7 @@ carrierList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-carrier]");
   if (!button) return;
   state.carrier = button.dataset.carrier;
-  if (state.carrier === "ups") {
+  if (isPickupOnlyCarrier()) {
     setTask("pickup");
   }
   renderCarriers();
@@ -695,9 +827,10 @@ form.addEventListener("input", (event) => {
   renderOutputs();
 });
 document.querySelector("#openPortal").addEventListener("click", () => window.open(carrierPortal(), "_blank", "noopener"));
-document.querySelector("#copySummary").addEventListener("click", () => copyText(isUpsPickup() ? buildUpsValues() : summaryText(), isUpsPickup() ? "UPS values" : "Summary"));
+document.querySelector("#copySummary").addEventListener("click", () => copyText(presetCopyText(), presetCopyLabel()));
 document.querySelector("#copyChecklist").addEventListener("click", () => copyText([...checklist.children].map((li, index) => `${index + 1}. ${li.textContent}`).join("\n"), "Checklist"));
 document.querySelector("#copyUpsValues").addEventListener("click", () => copyText(buildUpsValues(), "UPS values"));
+document.querySelector("#copyPurolatorValues").addEventListener("click", () => copyText(buildPurolatorValues(), "Purolator values"));
 document.querySelector("#copyEmail").addEventListener("click", () => copyText(emailDraft.value, "Email"));
 document.querySelector("#draftEmail").addEventListener("click", openEmailDraft);
 document.querySelector("#saveLog").addEventListener("click", saveLogEntry);

@@ -383,6 +383,16 @@ textarea:focus {
   font-weight: 900;
 }
 
+.preset-note {
+  padding: 10px 12px;
+  border-left: 3px solid var(--amber);
+  background: #fff8ed;
+  color: #60400f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
