@@ -833,6 +833,23 @@ function formatPickupWindow(entry) {
   ].filter(Boolean).join(" ");
 }
 
+function compactDateLabel(dateValue) {
+  if (!dateValue) return "No date";
+  if (dateValue === today()) return "Today";
+  const tomorrow = localDate(today());
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (dateValue === dateString(tomorrow)) return "Tomorrow";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric"
+  }).format(localDate(dateValue));
+}
+
+function compactTimeWindow(entry) {
+  if (!entry.readyTime && !entry.closeTime) return "No time set";
+  return [entry.readyTime || "?", entry.closeTime || "?"].join("-");
+}
+
 function createPickupEntry(status = "booking") {
   const data = formData();
   const carrierName = carriers[state.carrier].name;
@@ -931,9 +948,10 @@ function renderHistory() {
   const history = getStore(storageKeys.history);
   renderPickupSummary(history);
   historyList.innerHTML = "";
+  historyList.className = "history-list";
 
   if (!history.length) {
-    historyList.innerHTML = `<p class="carrier-note">No pickups prepared yet. Click Prepare pickup to start one.</p>`;
+    historyList.innerHTML = `<p class="summary-empty">No pickups or orders prepared yet.</p>`;
     return;
   }
 
@@ -956,37 +974,51 @@ function renderHistory() {
     }
   ];
 
-  groups.forEach((group) => {
-    if (!group.entries.length) return;
-    const heading = document.createElement("div");
-    heading.className = "history-section-title";
-    heading.textContent = group.label;
-    historyList.append(heading);
+  historyList.className = "summary-board";
 
+  groups.forEach((group) => {
+    const column = document.createElement("section");
+    column.className = "summary-column";
+    column.innerHTML = `
+      <div class="summary-column-heading">
+        <h4>${group.label}</h4>
+        <span>${group.entries.length}</span>
+      </div>
+    `;
     group.entries.forEach((entry) => {
-    const item = document.createElement("div");
-    item.className = "history-item";
-    const date = new Date(entry.createdAt).toLocaleString();
+      const item = document.createElement("div");
+      item.className = "summary-card";
       const status = bookingStatus(entry);
-      const pickupWindow = formatPickupWindow(entry);
-      const skids = entry.skids ? ` · ${entry.skids} skids` : "";
       const entryLabel = entry.task === "shipment" ? "order" : "pickup";
       const doneStatus = entry.task === "shipment" ? "created" : "booked";
       const doneLabel = entry.task === "shipment" ? "Created" : "Booked";
-    item.innerHTML = `
-      <div>
-          <strong>${carriers[entry.carrier]?.name || entry.carrier} ${entryLabel}: ${pickupWindow}${skids}</strong>
-          <span><span class="status-chip ${statusClass(status)}">${statusLabel(status)}</span> ${entry.reference} · ${entry.notes || "No instructions"} · updated ${date}</span>
+      const carrierName = carriers[entry.carrier]?.name || entry.carrier;
+      const meta = [
+        compactDateLabel(entry.pickupDate),
+        compactTimeWindow(entry),
+        entry.skids ? `${entry.skids} skids` : ""
+      ].filter(Boolean).join(" · ");
+      item.innerHTML = `
+        <div class="summary-card-top">
+          <strong>${carrierName}</strong>
+          <span class="status-chip ${statusClass(status)}">${statusLabel(status)}</span>
         </div>
-        <div class="history-actions">
-          <button class="ghost-button small" data-copy-log="${entry.id}">Copy</button>
+        <span class="summary-card-type">${entryLabel}</span>
+        <span class="summary-card-meta">${meta}</span>
+        <div class="summary-card-actions">
           <button class="ghost-button small" data-set-status="${entry.id}" data-status="${doneStatus}">${doneLabel}</button>
           <button class="ghost-button small" data-set-status="${entry.id}" data-status="picked-up">Picked up</button>
-          <button class="ghost-button small" data-set-status="${entry.id}" data-status="needs-rebook">Rebook</button>
-      </div>
-    `;
-    historyList.append(item);
+        </div>
+      `;
+      column.append(item);
     });
+    if (!group.entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "summary-column-empty";
+      empty.textContent = "Nothing here";
+      column.append(empty);
+    }
+    historyList.append(column);
   });
 }
 
