@@ -1,4 +1,9 @@
 const UPS_DEFAULTS = {
+  trackingNumbers: [
+    "1Z0XXXXXXXXXXXXX18",
+    "1Z1XXXXXXXXXXXXX18",
+    "1Z2XXXXXXXXXXXXX18"
+  ],
   companyName: "YYZ PREP",
   contactName: "YYZ PREP",
   email: "hello@yyzprep.ca",
@@ -267,6 +272,7 @@ function setClassicTime(prefix, timeValue) {
 
 function fillClassicUpsPickup(booking, instruction) {
   clickById("radioShippingY");
+  setTextById("trkNbrAreaId", UPS_DEFAULTS.trackingNumbers.join("\n"));
   setTextById("addrMDCompanyId", UPS_DEFAULTS.companyName);
   setTextById("addrMDCustNameId", UPS_DEFAULTS.contactName);
   setTextById("addressId", UPS_DEFAULTS.addressLine1);
@@ -376,12 +382,12 @@ function runUpsAutomation(booking) {
     } else {
       const standardSelected = fillUpsPickup(booking);
       updateHelperStatus(standardSelected ? "UPS Standard selected" : "Waiting for UPS Standard service options");
-      if (standardSelected && attempts >= 3) {
+      if (standardSelected && attempts >= 2) {
         window.clearInterval(upsAutomationTimer);
       }
     }
-    if (attempts >= 8) window.clearInterval(upsAutomationTimer);
-  }, 1800);
+    if (attempts >= 4) window.clearInterval(upsAutomationTimer);
+  }, 2200);
 }
 
 function updateHelperStatus(message) {
