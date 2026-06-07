@@ -1028,6 +1028,12 @@ function saveBookingForExtension(entry) {
   });
 }
 
+function bookingUrlWithPayload(entry) {
+  const url = new URL(entry.bookingUrl);
+  url.searchParams.set("assistantHubBooking", encodeURIComponent(JSON.stringify(entry)));
+  return url.toString();
+}
+
 async function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   const bookingTab = window.open("about:blank", "_blank");
@@ -1037,7 +1043,7 @@ async function startPickupBooking() {
   flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
   await saveBookingForExtension(entry);
   if (bookingTab) {
-    bookingTab.location.href = entry.bookingUrl;
+    bookingTab.location.href = bookingUrlWithPayload(entry);
     return;
   }
   flash("Popup blocked. Allow popups for this page, then submit again.");

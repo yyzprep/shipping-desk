@@ -324,15 +324,29 @@ function bookingFromWindowName() {
   }
 }
 
+function bookingFromUrl() {
+  const encoded = new URLSearchParams(location.search).get("assistantHubBooking");
+  if (!encoded) return null;
+  try {
+    const booking = JSON.parse(decodeURIComponent(encoded));
+    const cleanUrl = new URL(location.href);
+    cleanUrl.searchParams.delete("assistantHubBooking");
+    history.replaceState(null, "", cleanUrl.toString());
+    return booking;
+  } catch {
+    return null;
+  }
+}
+
 function injectPanel(booking) {
-  if (!booking || booking.carrier !== "ups" || document.querySelector("#shipping-desk-helper")) return;
+  if (document.querySelector("#shipping-desk-helper")) return;
 
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
-    <button type="button">Retry UPS fill</button>
-    <span>${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}</span>
-    <small>Fills known fields only. Stop before final submit/payment.</small>
+    <button type="button">${booking?.carrier === "ups" ? "Retry UPS fill" : "Assistant Hub loaded"}</button>
+    <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
+    <small>${booking?.carrier === "ups" ? "Fills known fields only. Stop before final submit/payment." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -357,7 +371,7 @@ function injectPanel(booking) {
 }
 
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
-  const pendingBooking = bookingFromWindowName() || shippingDeskPendingBooking;
+  const pendingBooking = bookingFromUrl() || bookingFromWindowName() || shippingDeskPendingBooking;
   injectPanel(pendingBooking);
   runUpsAutomation(pendingBooking);
 });
