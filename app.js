@@ -216,9 +216,14 @@ const emailDraft = document.querySelector("#emailDraft");
 const historyList = document.querySelector("#historyList");
 const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
+const referenceLabel = document.querySelector("#referenceLabel");
 const upsPresetPanel = document.querySelector("#upsPresetPanel");
 const upsOutputBlock = document.querySelector("#upsOutputBlock");
 const upsValues = document.querySelector("#upsValues");
+const emailOutputBlock = document.querySelector("#emailOutputBlock");
+const draftEmailButton = document.querySelector("#draftEmail");
+const copySummaryButton = document.querySelector("#copySummary");
+const saveLogButton = document.querySelector("#saveLog");
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -262,6 +267,15 @@ function carrierPortal() {
 
 function isUpsPickup() {
   return state.carrier === "ups" && state.task === "pickup";
+}
+
+function setTask(task) {
+  state.task = task;
+  document.querySelectorAll(".segment").forEach((item) => {
+    const active = item.dataset.task === state.task;
+    item.classList.toggle("active", active);
+    item.setAttribute("aria-checked", String(active));
+  });
 }
 
 function upsInstructionText() {
@@ -359,6 +373,8 @@ function renderHeader() {
   document.querySelector("#modeLabel").textContent = mode;
   document.querySelector("#taskTitle").textContent = title;
   document.querySelector("#statusPill").textContent = `${carriers[state.carrier].name} selected`;
+  referenceLabel.textContent = isUpsPickup() ? "Pickup confirmation" : "Reference / order";
+  form.elements.reference.placeholder = isUpsPickup() ? "Add after booking" : "Order 1842";
 }
 
 function renderChecklist() {
@@ -486,6 +502,9 @@ function buildEmailDraft() {
 }
 
 function renderOutputs() {
+  if (state.carrier === "ups" && state.task !== "pickup") {
+    setTask("pickup");
+  }
   if (state.carrier === "ups") {
     applyUpsPreset();
   }
@@ -494,6 +513,18 @@ function renderOutputs() {
   const showUpsPreset = isUpsPickup();
   upsPresetPanel.hidden = !showUpsPreset;
   upsOutputBlock.hidden = !showUpsPreset;
+  emailOutputBlock.hidden = showUpsPreset;
+  draftEmailButton.hidden = showUpsPreset;
+  copySummaryButton.textContent = showUpsPreset ? "Copy UPS values" : "Copy summary";
+  saveLogButton.textContent = showUpsPreset ? "Log pickup" : "Save log";
+  document.querySelectorAll(".generic-fields").forEach((element) => {
+    element.hidden = showUpsPreset;
+  });
+  document.querySelectorAll(".segment").forEach((button) => {
+    const disabled = state.carrier === "ups" && button.dataset.task !== "pickup";
+    button.disabled = disabled;
+    button.setAttribute("aria-disabled", String(disabled));
+  });
   upsValues.textContent = showUpsPreset ? buildUpsValues() : "";
   emailDraft.value = buildEmailDraft();
 }
@@ -514,19 +545,25 @@ function openEmailDraft() {
 function saveLogEntry() {
   const data = formData();
   const history = getStore(storageKeys.history);
+  const pickupStatus = data.readyDate && data.readyDate < today() ? "completed" : "scheduled";
   history.unshift({
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     task: state.task,
     carrier: state.carrier,
-    reference: data.reference || "No reference",
-    recipient: data.recipient || data.contactName || "No recipient",
-    notes: data.notes || "",
-    summary: summaryText()
+    status: pickupStatus,
+    reference: data.reference || "No confirmation yet",
+    recipient: data.recipient || data.contactName || upsPreset.companyName || "No recipient",
+    pickupDate: data.readyDate || "",
+    readyTime: data.readyTime || "",
+    closeTime: data.closeTime || "",
+    skids: data.skids || "",
+    notes: isUpsPickup() ? data.upsSpecialInstructions || upsInstructionText() : data.notes || "",
+    summary: isUpsPickup() ? buildUpsValues() : summaryText()
   });
   setStore(storageKeys.history, history.slice(0, 30));
   renderHistory();
-  flash("Log saved");
+  flash("Pickup logged");
 }
 
 function renderHistory() {
@@ -538,18 +575,48 @@ function renderHistory() {
     return;
   }
 
-  history.forEach((entry) => {
+  const groups = [
+    {
+      label: "Today",
+      entries: history.filter((entry) => entry.status !== "completed" && entry.pickupDate === today())
+    },
+    {
+      label: "Upcoming",
+      entries: history.filter((entry) => entry.status !== "completed" && entry.pickupDate !== today())
+    },
+    {
+      label: "Completed",
+      entries: history.filter((entry) => entry.status === "completed")
+    }
+  ];
+
+  groups.forEach((group) => {
+    if (!group.entries.length) return;
+    const heading = document.createElement("div");
+    heading.className = "history-section-title";
+    heading.textContent = group.label;
+    historyList.append(heading);
+
+    group.entries.forEach((entry) => {
     const item = document.createElement("div");
     item.className = "history-item";
     const date = new Date(entry.createdAt).toLocaleString();
+      const pickupWindow = [entry.pickupDate || "No date", entry.readyTime || "", "to", entry.closeTime || ""].filter(Boolean).join(" ");
+      const skids = entry.skids ? ` · ${entry.skids} skids` : "";
     item.innerHTML = `
       <div>
-        <strong>${carriers[entry.carrier]?.name || entry.carrier} ${entry.task}: ${entry.reference}</strong>
-        <span>${entry.recipient} · ${date}</span>
+          <strong>${carriers[entry.carrier]?.name || entry.carrier} pickup: ${pickupWindow}${skids}</strong>
+          <span>${entry.reference} · ${entry.notes || "No instructions"} · logged ${date}</span>
+        </div>
+        <div class="history-actions">
+          <button class="ghost-button small" data-copy-log="${entry.id}">Copy</button>
+          <button class="ghost-button small" data-toggle-status="${entry.id}">
+            ${entry.status === "completed" ? "Reopen" : "Complete"}
+          </button>
       </div>
-      <button class="ghost-button small" data-copy-log="${entry.id}">Copy</button>
     `;
     historyList.append(item);
+    });
   });
 }
 
@@ -606,18 +673,17 @@ carrierList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-carrier]");
   if (!button) return;
   state.carrier = button.dataset.carrier;
+  if (state.carrier === "ups") {
+    setTask("pickup");
+  }
   renderCarriers();
   renderOutputs();
 });
 
 document.querySelectorAll(".segment").forEach((button) => {
   button.addEventListener("click", () => {
-    state.task = button.dataset.task;
-    document.querySelectorAll(".segment").forEach((item) => {
-      const active = item === button;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-checked", String(active));
-    });
+    if (button.disabled) return;
+    setTask(button.dataset.task);
     renderOutputs();
   });
 });
@@ -629,7 +695,7 @@ form.addEventListener("input", (event) => {
   renderOutputs();
 });
 document.querySelector("#openPortal").addEventListener("click", () => window.open(carrierPortal(), "_blank", "noopener"));
-document.querySelector("#copySummary").addEventListener("click", () => copyText(summaryText(), "Summary"));
+document.querySelector("#copySummary").addEventListener("click", () => copyText(isUpsPickup() ? buildUpsValues() : summaryText(), isUpsPickup() ? "UPS values" : "Summary"));
 document.querySelector("#copyChecklist").addEventListener("click", () => copyText([...checklist.children].map((li, index) => `${index + 1}. ${li.textContent}`).join("\n"), "Checklist"));
 document.querySelector("#copyUpsValues").addEventListener("click", () => copyText(buildUpsValues(), "UPS values"));
 document.querySelector("#copyEmail").addEventListener("click", () => copyText(emailDraft.value, "Email"));
@@ -644,10 +710,25 @@ document.querySelector("#clearLog").addEventListener("click", () => {
 });
 templateSelect.addEventListener("change", () => loadTemplate(templateSelect.value));
 historyList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-copy-log]");
-  if (!button) return;
-  const entry = getStore(storageKeys.history).find((item) => item.id === button.dataset.copyLog);
-  if (entry) copyText(entry.summary, "Log");
+  const copyButton = event.target.closest("[data-copy-log]");
+  if (copyButton) {
+    const entry = getStore(storageKeys.history).find((item) => item.id === copyButton.dataset.copyLog);
+    if (entry) copyText(entry.summary, "Log");
+    return;
+  }
+
+  const statusButton = event.target.closest("[data-toggle-status]");
+  if (!statusButton) return;
+  const history = getStore(storageKeys.history).map((entry) => {
+    if (entry.id !== statusButton.dataset.toggleStatus) return entry;
+    return {
+      ...entry,
+      status: entry.status === "completed" ? "scheduled" : "completed"
+    };
+  });
+  setStore(storageKeys.history, history);
+  renderHistory();
+  flash("Pickup status updated");
 });
 
 form.elements.readyDate.value = today();

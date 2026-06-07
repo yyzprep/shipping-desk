@@ -17,7 +17,7 @@
           </div>
         </div>
 
-        <section class="panel compact">
+        <section class="panel compact" id="taskPanel">
           <div class="panel-heading">
             <h2>Task</h2>
           </div>
@@ -101,7 +101,7 @@
 
             <div class="field-grid">
               <label>
-                <span>Reference / order</span>
+                <span id="referenceLabel">Reference / order</span>
                 <input id="reference" name="reference" placeholder="Order 1842">
               </label>
               <label>
@@ -118,7 +118,7 @@
               </label>
             </div>
 
-            <div class="field-grid two">
+            <div class="field-grid two generic-fields" id="contactFields">
               <label>
                 <span>Pickup contact</span>
                 <input id="contactName" name="contactName" placeholder="Reception / Sarah">
@@ -137,17 +137,17 @@
               </label>
             </div>
 
-            <label>
+            <label class="generic-fields" id="pickupAddressField">
               <span>Pickup address</span>
               <textarea id="pickupAddress" name="pickupAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
             </label>
 
-            <label>
+            <label class="generic-fields" id="destinationAddressField">
               <span>Destination address</span>
               <textarea id="destinationAddress" name="destinationAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
             </label>
 
-            <div class="field-grid package-grid">
+            <div class="field-grid package-grid generic-fields" id="packageFields">
               <label>
                 <span>Packages</span>
                 <input id="packages" name="packages" type="number" min="1" value="1">
@@ -172,7 +172,7 @@
               </label>
             </div>
 
-            <label>
+            <label class="generic-fields" id="notesField">
               <span>Notes</span>
               <textarea id="notes" name="notes" rows="3" placeholder="Dock instructions, label status, special handling, etc."></textarea>
             </label>
@@ -188,7 +188,7 @@
               <button class="primary-button" id="openPortal">Open portal</button>
               <button class="secondary-button" id="copySummary">Copy summary</button>
               <button class="secondary-button" id="draftEmail">Draft email</button>
-              <button class="secondary-button" id="saveLog">Save log</button>
+              <button class="secondary-button" id="saveLog">Log pickup</button>
             </div>
 
             <div class="output-block">
@@ -207,7 +207,7 @@
               <pre id="upsValues"></pre>
             </div>
 
-            <div class="output-block">
+            <div class="output-block" id="emailOutputBlock">
               <div class="output-heading">
                 <h4>Email draft</h4>
                 <button class="ghost-button small" id="copyEmail">Copy</button>
@@ -219,7 +219,7 @@
 
         <section class="history-panel" aria-label="Task log">
           <div class="section-title">
-            <h3>Recent log</h3>
+            <h3>Pickup log</h3>
             <button type="button" class="ghost-button" id="clearLog">Clear log</button>
           </div>
           <div id="historyList" class="history-list"></div>
