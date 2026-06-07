@@ -236,6 +236,9 @@ const storageKeys = {
 
 const form = document.querySelector("#shippingForm");
 const carrierList = document.querySelector("#carrierList");
+const activeOptions = document.querySelector(".simple-options");
+const simpleWorkspace = document.querySelector(".simple-workspace");
+const historyPanel = document.querySelector(".history-panel");
 const checklist = document.querySelector("#checklist");
 const emailDraft = document.querySelector("#emailDraft");
 const historyList = document.querySelector("#historyList");
@@ -438,6 +441,10 @@ function applyPurolatorPreset() {
 }
 
 function renderCarriers() {
+  if (activeOptions && activeOptions.parentElement?.id === "activeCarrierSlot") {
+    simpleWorkspace.insertBefore(activeOptions, historyPanel);
+  }
+
   carrierList.innerHTML = "";
   carrierSections.forEach((section) => {
     const sectionCarriers = Object.entries(carriers).filter(([, carrier]) => carrier.section === section.id);
@@ -451,7 +458,8 @@ function renderCarriers() {
     sectionCarriers.forEach(([id, carrier]) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `carrier-button ${id === state.carrier ? "active" : ""}`;
+      const active = id === state.carrier;
+      button.className = `carrier-button ${active ? "active" : ""}`;
       button.dataset.carrier = id;
       button.innerHTML = `
         <span class="carrier-logo" style="background:${carrier.color}">${carrier.short}</span>
@@ -459,10 +467,25 @@ function renderCarriers() {
           <span class="carrier-name">${carrier.name}</span>
           <span class="carrier-note">${carrier.note}</span>
         </span>
+        <span class="carrier-status">${active ? "Selected" : "Choose"}</span>
       `;
       carrierList.append(button);
+      if (active) {
+        const slot = document.createElement("div");
+        slot.id = "activeCarrierSlot";
+        slot.className = "carrier-expanded-slot";
+        carrierList.append(slot);
+      }
     });
   });
+  placeActiveCarrierOptions();
+}
+
+function placeActiveCarrierOptions() {
+  const slot = document.querySelector("#activeCarrierSlot");
+  if (slot && activeOptions) {
+    slot.append(activeOptions);
+  }
 }
 
 function taskCopy() {

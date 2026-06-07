@@ -7,17 +7,17 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <main class="app-shell">
-      <aside class="sidebar" aria-label="Shipping actions">
+    <main class="app-shell simple-shell">
+      <aside class="sidebar compact-header" aria-label="Shipping actions">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">SD</div>
           <div>
             <h1>Shipping Desk</h1>
-            <p>Pickups, shipments, and draft emails in one place.</p>
+            <p>Pick a carrier, set the pickup window, book it.</p>
           </div>
         </div>
 
-        <section class="panel compact" id="taskPanel">
+        <section class="panel compact utility-panel" id="taskPanel">
           <div class="panel-heading">
             <h2>Task</h2>
           </div>
@@ -28,14 +28,14 @@
           </div>
         </section>
 
-        <section class="panel compact">
+        <section class="panel compact carrier-panel">
           <div class="panel-heading">
-            <h2>Carrier</h2>
+            <h2>Carriers</h2>
           </div>
           <div class="carrier-list" id="carrierList"></div>
         </section>
 
-        <section class="panel compact">
+        <section class="panel compact utility-panel">
           <div class="panel-heading">
             <h2>Templates</h2>
             <button class="icon-button" id="saveTemplate" title="Save current values" aria-label="Save current values">
@@ -48,8 +48,8 @@
         </section>
       </aside>
 
-      <section class="workspace" aria-label="Shipping workspace">
-        <div class="top-strip">
+      <section class="workspace simple-workspace" aria-label="Shipping workspace">
+        <div class="top-strip utility-panel">
           <div class="route-visual" aria-hidden="true">
             <span class="node origin"></span>
             <span class="route-line"></span>
@@ -63,10 +63,18 @@
           <div class="status-pill" id="statusPill">UPS selected</div>
         </div>
 
-        <div class="content-grid">
+        <div class="active-carrier-bar">
+          <div>
+            <p class="eyebrow" id="modeLabel">Pickup booking</p>
+            <h2 id="taskTitle">Book a pickup</h2>
+          </div>
+          <div class="status-pill" id="statusPill">UPS selected</div>
+        </div>
+
+        <div class="content-grid simple-options">
           <form class="form-panel" id="shippingForm">
             <div class="section-title">
-              <h3>Details</h3>
+              <h3>Pickup options</h3>
               <button type="button" class="ghost-button" id="clearForm">Clear</button>
             </div>
 

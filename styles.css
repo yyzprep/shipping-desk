@@ -43,9 +43,16 @@ button {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   min-height: 100vh;
+}
+
+.simple-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px;
 }
 
 .sidebar {
@@ -55,6 +62,12 @@ button {
   padding: 22px;
   background: #fbfcfb;
   border-right: 1px solid var(--line);
+}
+
+.compact-header {
+  padding: 0;
+  background: transparent;
+  border-right: 0;
 }
 
 .brand {
@@ -111,6 +124,14 @@ h1 {
   box-shadow: none;
 }
 
+.utility-panel {
+  display: none;
+}
+
+.carrier-panel {
+  padding: 12px;
+}
+
 .panel-heading,
 .section-title,
 .output-heading {
@@ -161,11 +182,13 @@ h1 {
 
 .carrier-list {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
   margin-top: 12px;
 }
 
 .carrier-section-title {
+  grid-column: 1 / -1;
   margin-top: 4px;
   color: var(--muted);
   font-size: 11px;
@@ -180,10 +203,10 @@ h1 {
 
 .carrier-button {
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 36px 1fr auto;
   gap: 10px;
   align-items: center;
-  min-height: 48px;
+  min-height: 58px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -221,6 +244,21 @@ h1 {
   font-size: 12px;
 }
 
+.carrier-status {
+  align-self: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.carrier-button.active .carrier-status {
+  background: var(--green);
+  color: #fff;
+}
+
 select,
 input,
 textarea {
@@ -255,8 +293,12 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 22px;
+  padding: 0;
   min-width: 0;
+}
+
+.simple-workspace {
+  gap: 14px;
 }
 
 .top-strip {
@@ -269,6 +311,10 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: linear-gradient(90deg, #ffffff, #f7faf9);
+}
+
+.top-strip.utility-panel {
+  display: none;
 }
 
 .route-visual {
@@ -358,6 +404,57 @@ textarea:focus {
   align-items: start;
 }
 
+.active-carrier-bar {
+  display: none;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.active-carrier-bar #taskTitle {
+  font-size: 20px;
+}
+
+.simple-options {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.carrier-expanded-slot {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  margin-bottom: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.carrier-expanded-slot .simple-options {
+  display: grid;
+}
+
+.simple-options .form-panel,
+.simple-options .action-panel,
+.history-panel {
+  box-shadow: none;
+}
+
+.carrier-expanded-slot .form-panel,
+.carrier-expanded-slot .action-panel {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.simple-options .action-panel {
+  position: static;
+}
+
 .form-panel,
 .action-panel,
 .history-panel {
@@ -366,7 +463,7 @@ textarea:focus {
 
 .form-panel {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .preset-panel {
@@ -501,6 +598,12 @@ label {
   gap: 14px;
 }
 
+.simple-options .action-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  align-items: start;
+}
+
 .button-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -560,6 +663,10 @@ label {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfcfb;
+}
+
+.simple-options .output-block {
+  min-height: 100%;
 }
 
 .output-heading h4 {
@@ -642,10 +749,6 @@ pre {
 }
 
 @media (max-width: 1080px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -656,8 +759,16 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .carrier-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .action-panel {
     position: static;
+  }
+
+  .simple-options .action-panel {
+    grid-template-columns: 1fr;
   }
 
   .route-visual {
@@ -674,8 +785,26 @@ pre {
   .field-grid,
   .field-grid.two,
   .package-grid,
+  .pickup-window-grid,
   .button-grid {
     grid-template-columns: 1fr;
+  }
+
+  .simple-shell {
+    padding: 12px;
+  }
+
+  .carrier-list {
+    grid-template-columns: 1fr;
+  }
+
+  .carrier-button {
+    grid-template-columns: 36px 1fr;
+  }
+
+  .carrier-status {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .primary-button {
