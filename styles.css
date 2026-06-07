@@ -414,6 +414,11 @@ textarea:focus {
   gap: 12px;
 }
 
+.compact-defaults {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .side-details {
   display: grid;
   gap: 10px;

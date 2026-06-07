@@ -36,9 +36,9 @@ const carriers = {
     checklist: {
       pickup: [
         "Open Purolator pickup booking and sign in if needed.",
-        "Edit the pickup address using the Purolator booking values.",
-        "When Address Finder Validation appears, click Ignore.",
-        "After it returns to Edit Address, click Save, then finish booking the pickup and log the confirmation."
+        "Select the pickup date and pickup window.",
+        "Book the pickup using the saved YYZ PREP address defaults.",
+        "Log the pickup after booking."
       ],
       shipment: [
         "Open Purolator shipping tools.",
@@ -201,7 +201,7 @@ const upsPreset = {
 
 const purolatorPreset = {
   companyName: "YYZ PREP",
-  contactName: "ALT",
+  contactName: "ALI",
   country: "Canada",
   postalCode: "L6Z 0B5",
   city: "BRAMPTON",
@@ -710,7 +710,7 @@ function saveLogEntry() {
     notes: isUpsPickup()
       ? data.upsSpecialInstructions || upsInstructionText()
       : isPurolatorPickup()
-        ? "Address validation: click Ignore, then Save."
+        ? "Purolator pickup"
         : data.notes || "",
     summary: presetCopyText()
   });
