@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.0";
+const HELPER_VERSION = "0.2.1";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 

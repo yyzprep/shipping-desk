@@ -4,7 +4,7 @@ const carriers = {
     short: "UPS",
     section: "parcel",
     color: "#7a4b21",
-    portal: "https://wwwapps.ups.com/pickup/schedule?loc=en_CA&client=IPR",
+    portal: "https://wwwapps.ups.com/pickup/request?loc=en_CA&client=IPR",
     note: "Pickup and shipment portal",
     checklist: {
       pickup: [
@@ -1031,6 +1031,7 @@ function saveBookingForExtension(entry) {
 function bookingUrlWithPayload(entry) {
   const url = new URL(entry.bookingUrl);
   url.searchParams.set("assistantHubBooking", encodeURIComponent(JSON.stringify(entry)));
+  url.searchParams.set("assistantHubRun", Date.now().toString());
   return url.toString();
 }
 
