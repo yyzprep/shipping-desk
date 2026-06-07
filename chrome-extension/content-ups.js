@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.1";
+const HELPER_VERSION = "0.2.2";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -39,10 +39,11 @@ function setNativeValue(element, value) {
 function chooseSelect(element, wanted) {
   if (!element || element.tagName !== "SELECT") return false;
   const normalized = String(wanted).toLowerCase();
-  const option = [...element.options].find((item) => {
-    return item.textContent.trim().toLowerCase().includes(normalized)
-      || String(item.value).toLowerCase().includes(normalized);
-  });
+  const options = [...element.options];
+  const option = options.find((item) => item.textContent.trim().toLowerCase() === normalized)
+    || options.find((item) => String(item.value).toLowerCase() === normalized)
+    || options.find((item) => item.textContent.trim().toLowerCase().includes(normalized))
+    || options.find((item) => String(item.value).toLowerCase().includes(normalized));
   if (!option) return false;
   const win = element.ownerDocument?.defaultView || window;
   const descriptor = Object.getOwnPropertyDescriptor(win.HTMLSelectElement?.prototype || Object.getPrototypeOf(element), "value");
@@ -204,7 +205,14 @@ function selectById(id, value) {
 function clickById(id) {
   const field = document.getElementById(id);
   if (!field) return false;
-  field.click();
+  return clickControl(field);
+}
+
+function checkById(id) {
+  const field = document.getElementById(id);
+  if (!field) return false;
+  if (!field.checked) return clickControl(field);
+  field.dispatchEvent(new Event("change", { bubbles: true }));
   return true;
 }
 
@@ -254,6 +262,7 @@ function clickLabelOrControlByText(patterns, root = document) {
 function selectUpsStandardService() {
   clickControl(document.getElementById("domSrvButtonId"));
   clickLabelOrControlByText(["UPS Domestic Services", "domSrvButtonId"], document.getElementById("srvModuleDiv") || document);
+  if (checkById("chkSrvDomId4")) return true;
   const serviceRoot = document.getElementById("domSrvDiv") || document.getElementById("srvModuleDiv") || document;
   return clickLabelOrControlByText([
     "UPS Standard",
@@ -274,7 +283,7 @@ function setClassicTime(prefix, timeValue) {
   const amId = prefix === "ready" ? "readyAMId" : "closeAMId";
   const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
   selectById(hourId, String(hour));
-  selectById(minuteId, minuteText);
+  selectById(minuteId, String(Number(minuteText)));
   clickById(meridiem === "PM" ? pmId : amId);
   return true;
 }
