@@ -86,7 +86,11 @@
               <div class="field-grid pickup-grid">
                 <label>
                   <span>Skids</span>
-                  <input id="skids" name="skids" type="number" min="1" value="2">
+                  <div class="stepper" data-stepper-for="skids">
+                    <button type="button" class="stepper-button" data-stepper-action="decrease" aria-label="Decrease skids">-</button>
+                    <input id="skids" name="skids" type="number" min="1" value="2">
+                    <button type="button" class="stepper-button" data-stepper-action="increase" aria-label="Increase skids">+</button>
+                  </div>
                 </label>
               </div>
               <input id="preferredLocation" name="preferredLocation" type="hidden" value="Warehouse">
@@ -222,7 +226,11 @@
             <div class="field-grid package-grid generic-fields" id="packageFields">
               <label>
                 <span>Packages</span>
-                <input id="packages" name="packages" type="number" min="1" value="1">
+                <div class="stepper" data-stepper-for="packages">
+                  <button type="button" class="stepper-button" data-stepper-action="decrease" aria-label="Decrease packages">-</button>
+                  <input id="packages" name="packages" type="number" min="1" value="1">
+                  <button type="button" class="stepper-button" data-stepper-action="increase" aria-label="Increase packages">+</button>
+                </div>
               </label>
               <label>
                 <span>Total weight</span>

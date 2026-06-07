@@ -429,7 +429,7 @@ textarea:focus {
 }
 
 .details-card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .carrier-expanded-slot {
@@ -457,13 +457,13 @@ textarea:focus {
 
 .form-panel {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .preset-panel {
   display: grid;
-  gap: 10px;
-  padding: 0 0 12px;
+  gap: 8px;
+  padding: 0 0 10px;
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -526,7 +526,7 @@ textarea:focus {
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .field-grid.two {
@@ -539,6 +539,7 @@ textarea:focus {
 
 .pickup-window-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 2px;
 }
 
 .choice-control {
@@ -580,17 +581,56 @@ textarea:focus {
 
 label {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   color: #2f3e46;
   font-size: 13px;
   font-weight: 700;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 40px minmax(64px, 1fr) 40px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.stepper input {
+  min-height: 40px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  text-align: center;
+  font-weight: 900;
+  -moz-appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.stepper-button {
+  min-height: 40px;
+  border: 0;
+  background: #f8faf9;
+  color: var(--green-dark);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.stepper-button:hover {
+  background: var(--soft);
 }
 
 .inline-submit {
   display: grid;
   grid-template-columns: 1fr;
   gap: 6px;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .primary-button,

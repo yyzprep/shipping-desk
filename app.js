@@ -544,6 +544,10 @@ function applyShipSavvyPreset() {
     const field = form.elements[key];
     if (field && !field.value) field.value = value;
   });
+
+  if (state.carrier === "shipsavvy" && form.elements.packages?.value === upsPreset.packages) {
+    form.elements.packages.value = "1";
+  }
 }
 
 function renderCarriers() {
@@ -654,6 +658,16 @@ function setPickupWindow(start, end) {
   form.elements.closeTime.value = end;
   updatePickupWindowButtons();
   renderOutputs();
+}
+
+function updateSteppedQuantity(inputName, direction) {
+  const field = form.elements[inputName];
+  if (!field) return;
+  const min = Number(field.min || 0);
+  const current = Number(field.value || min || 0);
+  const next = direction === "increase" ? current + 1 : Math.max(min, current - 1);
+  field.value = String(next);
+  field.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function renderChecklist() {
@@ -1205,6 +1219,13 @@ timeWindowButtons.addEventListener("click", (event) => {
   const button = event.target.closest("[data-window-start][data-window-end]");
   if (!button) return;
   setPickupWindow(button.dataset.windowStart, button.dataset.windowEnd);
+});
+form.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-stepper-action]");
+  if (!button) return;
+  const stepper = button.closest("[data-stepper-for]");
+  if (!stepper) return;
+  updateSteppedQuantity(stepper.dataset.stepperFor, button.dataset.stepperAction);
 });
 document.querySelector("#openPortal").addEventListener("click", startPickupBooking);
 document.querySelector("#copySummary").addEventListener("click", () => copyText(presetCopyText(), presetCopyLabel()));
