@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.3";
+const HELPER_VERSION = "0.2.4";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -211,9 +211,39 @@ function clickById(id) {
 function checkById(id) {
   const field = document.getElementById(id);
   if (!field) return false;
-  if (!field.checked) return clickControl(field);
-  field.dispatchEvent(new Event("change", { bubbles: true }));
+  field.disabled = false;
+  field.removeAttribute("disabled");
+  if (!field.checked) field.click();
+  if (!field.checked) {
+    const win = field.ownerDocument?.defaultView || window;
+    const descriptor = Object.getOwnPropertyDescriptor(win.HTMLInputElement?.prototype || Object.getPrototypeOf(field), "checked");
+    descriptor?.set ? descriptor.set.call(field, true) : field.checked = true;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  }
   return true;
+}
+
+function enableClassicPickupControls() {
+  [
+    "chkSrvDomId4",
+    "pickupdate",
+    "readyHours",
+    "readyMinutes",
+    "readyAMId",
+    "readyPMId",
+    "closeHours",
+    "closeMinutes",
+    "closeAMId",
+    "closePMId",
+    "pickuppoint",
+    "spInstrId"
+  ].forEach((id) => {
+    const field = document.getElementById(id);
+    if (!field) return;
+    field.disabled = false;
+    field.removeAttribute("disabled");
+  });
 }
 
 function clickControl(control) {
@@ -301,6 +331,8 @@ function fillClassicUpsPickup(booking, instruction) {
   setTextById("postalcode", UPS_DEFAULTS.postalCode);
   setTextById("addrMDPhoneId", UPS_DEFAULTS.telephone);
   const standardSelected = selectUpsStandardService();
+  enableClassicPickupControls();
+  setTextById("selectedServices", "[011#001]");
   selectById("dtotalpkgs", UPS_DEFAULTS.packages);
   clickById("radioWeight70N");
   selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
