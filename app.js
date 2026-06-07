@@ -763,10 +763,12 @@ function renderOutputs() {
   emailOutputBlock.hidden = true;
   draftEmailButton.hidden = true;
   document.querySelector("#openPortal").textContent = state.task === "pickup"
-    ? `Prepare ${carriers[state.carrier].name} pickup`
+    ? `Submit ${carriers[state.carrier].name} pickup`
     : state.task === "shipment"
-      ? `Prepare ${carriers[state.carrier].name} order`
+      ? `Submit ${carriers[state.carrier].name} order`
       : `Open ${carriers[state.carrier].name}`;
+  copySummaryButton.hidden = true;
+  saveLogButton.hidden = true;
   copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy booking info";
   saveLogButton.textContent = state.task === "pickup" ? "Mark booked" : "Mark created";
   document.querySelectorAll(".generic-fields").forEach((element) => {
