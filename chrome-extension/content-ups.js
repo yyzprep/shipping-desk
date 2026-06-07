@@ -1,9 +1,4 @@
 const UPS_DEFAULTS = {
-  trackingNumbers: [
-    "1Z0XXXXXXXXXXXXX18",
-    "1Z1XXXXXXXXXXXXX18",
-    "1Z2XXXXXXXXXXXXX18"
-  ],
   companyName: "YYZ PREP",
   contactName: "YYZ PREP",
   email: "hello@yyzprep.ca",
@@ -272,7 +267,7 @@ function setClassicTime(prefix, timeValue) {
 
 function fillClassicUpsPickup(booking, instruction) {
   clickById("radioShippingY");
-  setTextById("trkNbrAreaId", UPS_DEFAULTS.trackingNumbers.join("\n"));
+  setTextById("trkNbrAreaId", "");
   setTextById("addrMDCompanyId", UPS_DEFAULTS.companyName);
   setTextById("addrMDCustNameId", UPS_DEFAULTS.contactName);
   setTextById("addressId", UPS_DEFAULTS.addressLine1);
@@ -361,7 +356,7 @@ function fillUpsPickup(booking) {
 function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
   if (upsAutomationStarted && upsAutomationTimer) {
-    window.clearInterval(upsAutomationTimer);
+    window.clearTimeout(upsAutomationTimer);
   }
   upsAutomationStarted = true;
 
@@ -374,20 +369,30 @@ function runUpsAutomation(booking) {
     confirmClassicView();
   }
 
-  let attempts = 0;
-  upsAutomationTimer = window.setInterval(() => {
-    attempts += 1;
+  const runFill = (shouldAdvance = false) => {
     if (!isClassicPickupPage()) {
       confirmClassicView();
     } else {
       const standardSelected = fillUpsPickup(booking);
-      updateHelperStatus(standardSelected ? "UPS Standard selected" : "Waiting for UPS Standard service options");
-      if (standardSelected && attempts >= 2) {
-        window.clearInterval(upsAutomationTimer);
-      }
+      updateHelperStatus(standardSelected ? "UPS Standard selected" : "Filled page 1. UPS Standard was not available.");
+      if (shouldAdvance) clickUpsNextToReview();
     }
-    if (attempts >= 4) window.clearInterval(upsAutomationTimer);
-  }, 2200);
+  };
+
+  window.setTimeout(() => runFill(false), 900);
+  upsAutomationTimer = window.setTimeout(() => runFill(true), 2800);
+}
+
+function clickUpsNextToReview() {
+  const nextButton = [...document.querySelectorAll("input[type='button'], button")]
+    .find((button) => isVisible(button) && visibleText(button).trim().toLowerCase() === "next");
+  if (!nextButton) {
+    updateHelperStatus("Filled what I could. UPS Next was not available.");
+    return false;
+  }
+  clickControl(nextButton);
+  updateHelperStatus("Clicked UPS Next. Review UPS validation before final submit.");
+  return true;
 }
 
 function updateHelperStatus(message) {
