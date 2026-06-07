@@ -8,10 +8,10 @@ const carriers = {
     note: "Pickup and shipment portal",
     checklist: {
       pickup: [
-        "Click Book UPS pickup.",
+        "Click Prepare UPS pickup.",
         "Confirm the UPS form matches the booking values.",
-        "Continue to the UPS review or payment page.",
-        "After UPS accepts it, click Mark booked."
+        "Stop on the UPS review or payment page before submitting.",
+        "After staff manually submits and UPS accepts it, click Mark booked."
       ],
       shipment: [
         "Open UPS shipping.",
@@ -35,10 +35,10 @@ const carriers = {
     note: "Pickup booking portal",
     checklist: {
       pickup: [
-        "Click Book Purolator pickup and sign in if needed.",
+        "Click Prepare Purolator pickup and sign in if needed.",
         "Select the pickup date and pickup window.",
-        "Book the pickup using the saved YYZ PREP address defaults.",
-        "After Purolator accepts it, click Mark booked."
+        "Stop on Purolator's final review step before submitting.",
+        "After staff manually submits and Purolator accepts it, click Mark booked."
       ],
       shipment: [
         "Open Purolator shipping tools.",
@@ -62,10 +62,10 @@ const carriers = {
     note: "Create shipments",
     checklist: {
       pickup: [
-        "Click Book ShipSavvy pickup and choose the relevant carrier or shipment.",
+        "Click Prepare ShipSavvy pickup and choose the relevant carrier or shipment.",
         "Confirm pickup location, package count, and pickup window.",
-        "Book the pickup or attach the carrier pickup reference.",
-        "After ShipSavvy accepts it, click Mark booked."
+        "Stop on ShipSavvy's final review step before submitting.",
+        "After staff manually submits and ShipSavvy accepts it, click Mark booked."
       ],
       shipment: [
         "Open ShipSavvy and start a new shipment.",
@@ -89,10 +89,10 @@ const carriers = {
     note: "Business pickup and labels",
     checklist: {
       pickup: [
-        "Click Book Canada Post pickup.",
+        "Click Prepare Canada Post pickup.",
         "Confirm pickup address, contact, ready time, close time, package count, and service.",
-        "Check that labels or manifests are ready before the pickup window.",
-        "After Canada Post accepts it, click Mark booked."
+        "Stop on Canada Post's final review step before submitting.",
+        "After staff manually submits and Canada Post accepts it, click Mark booked."
       ],
       shipment: [
         "Open Canada Post shipping tools.",
@@ -116,10 +116,10 @@ const carriers = {
     note: "LTL and courier freight",
     checklist: {
       pickup: [
-        "Click Book AB Courier pickup and confirm the pickup or order booking flow.",
+        "Click Prepare AB Courier pickup and confirm the pickup or order booking flow.",
         "Confirm pickup address, dock details, contact, freight count, and pickup window.",
-        "Include vehicle or LTL requirements in notes before submitting.",
-        "After AB Courier accepts it, click Mark booked."
+        "Stop on AB Courier's final review step before submitting.",
+        "After staff manually submits and AB Courier accepts it, click Mark booked."
       ],
       shipment: [
         "Open AB Courier and start the shipment/order workflow.",
@@ -143,10 +143,10 @@ const carriers = {
     note: "LTL freight marketplace",
     checklist: {
       pickup: [
-        "Click Book Freightera pickup and find the booked freight shipment.",
+        "Click Prepare Freightera pickup and find the freight shipment.",
         "Confirm pickup address, freight pieces, weight, dimensions, and pickup date.",
-        "Check accessorials such as tailgate, residential, appointment, or limited access.",
-        "After Freightera accepts it, click Mark booked."
+        "Stop on Freightera's final review step before submitting.",
+        "After staff manually submits and Freightera accepts it, click Mark booked."
       ],
       shipment: [
         "Open Freightera and quote or book an LTL shipment.",
@@ -497,7 +497,7 @@ function placeActiveCarrierOptions() {
 function taskCopy() {
   const carrier = carriers[state.carrier].name;
   const labels = {
-    pickup: ["Pickup booking", `Book a ${carrier} pickup`],
+    pickup: ["Pickup prep", `Prepare a ${carrier} pickup`],
     shipment: ["Shipment creation", `Create a ${carrier} shipment`],
     email: ["Email drafting", `Draft a ${carrier} update`]
   };
@@ -743,7 +743,7 @@ function renderOutputs() {
   emailOutputBlock.hidden = isCarrierPickupPreset();
   draftEmailButton.hidden = isCarrierPickupPreset();
   document.querySelector("#openPortal").textContent = state.task === "pickup"
-    ? `Book ${carriers[state.carrier].name} pickup`
+    ? `Prepare ${carriers[state.carrier].name} pickup`
     : `Open ${carriers[state.carrier].name}`;
   copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy booking info";
   saveLogButton.textContent = state.task === "pickup" ? "Mark booked" : "Save log";
@@ -784,7 +784,7 @@ function bookingStatus(entry) {
 
 function statusLabel(status) {
   const labels = {
-    booking: "Booking started",
+    booking: "Ready for review",
     booked: "Booked",
     missed: "Missed",
     "needs-rebook": "Needs rebook",
@@ -848,7 +848,7 @@ function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
   window.open(entry.bookingUrl, "_blank", "noopener");
-  flash(`${carriers[state.carrier].name} booking started`);
+  flash(`${carriers[state.carrier].name} pickup prepared for review`);
 }
 
 function markBookingConfirmed() {
@@ -904,7 +904,7 @@ function renderHistory() {
   historyList.innerHTML = "";
 
   if (!history.length) {
-    historyList.innerHTML = `<p class="carrier-note">No pickups booked yet. Click Book pickup to start one.</p>`;
+    historyList.innerHTML = `<p class="carrier-note">No pickups prepared yet. Click Prepare pickup to start one.</p>`;
     return;
   }
 

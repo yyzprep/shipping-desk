@@ -134,17 +134,18 @@ function injectPanel(booking) {
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
-    <button type="button">Fill UPS pickup</button>
+    <button type="button">Prepare UPS pickup</button>
     <span>${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}</span>
+    <small>Fills known fields only. Stop before final submit/payment.</small>
   `;
   panel.style.cssText = [
     "position:fixed",
     "right:16px",
     "bottom:16px",
     "z-index:2147483647",
-    "display:flex",
-    "gap:8px",
-    "align-items:center",
+    "display:grid",
+    "gap:6px",
+    "max-width:300px",
     "padding:10px",
     "border:1px solid #d9e0e4",
     "border-radius:8px",
@@ -154,6 +155,7 @@ function injectPanel(booking) {
     "color:#172026"
   ].join(";");
   panel.querySelector("button").style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
+  panel.querySelector("small").style.cssText = "color:#63717b;line-height:1.35";
   panel.querySelector("button").addEventListener("click", () => fillUpsPickup(booking));
   document.body.append(panel);
 }

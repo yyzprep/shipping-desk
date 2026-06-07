@@ -3,12 +3,17 @@
   "name": "Shipping Desk Helper",
   "version": "0.1.0",
   "description": "Carries Shipping Desk pickup details into carrier booking pages.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "clipboardWrite"],
   "host_permissions": [
     "https://yyzprep.github.io/shipping-desk/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
-    "https://www.ups.com/*"
+    "https://www.ups.com/*",
+    "https://eshiponline.purolator.com/*",
+    "https://shipsavvy.com/*",
+    "https://www.canadapost-postescanada.ca/*",
+    "https://www.abcourier.com/*",
+    "https://www.freightera.com/*"
   ],
   "content_scripts": [
     {
@@ -22,6 +27,17 @@
     {
       "matches": ["https://www.ups.com/*"],
       "js": ["content-ups.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://eshiponline.purolator.com/*",
+        "https://shipsavvy.com/*",
+        "https://www.canadapost-postescanada.ca/*",
+        "https://www.abcourier.com/*",
+        "https://www.freightera.com/*"
+      ],
+      "js": ["content-carrier.js"],
       "run_at": "document_idle"
     }
   ]

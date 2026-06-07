@@ -2,12 +2,16 @@
 
 This is the bridge that lets Shipping Desk carry pickup details into logged-in carrier pages.
 
+The rule for every carrier is: prepare the pickup details, then stop before the final submit, confirm, book, or payment action. Staff should review the final carrier page manually before booking.
+
 ## Install for testing
 
 1. Open Chrome and go to `chrome://extensions`.
 2. Turn on Developer mode.
 3. Click Load unpacked.
 4. Select this `chrome-extension` folder.
-5. Open Shipping Desk, click `Book UPS pickup`, then open or switch to UPS.
+5. Open Shipping Desk, click `Prepare UPS pickup`, then open or switch to UPS.
 
-When a UPS booking is pending, the extension shows a `Fill UPS pickup` button on UPS pages. The helper fills the stable YYZ PREP defaults plus the selected pickup date, ready time, close time, and skids instruction. UPS form selectors may need one tuning pass after testing inside the logged-in UPS page.
+When a UPS booking is pending, the extension shows a `Prepare UPS pickup` button on UPS pages. The helper fills the stable YYZ PREP defaults plus the selected pickup date, ready time, close time, and skids instruction. It does not click final submit, book, confirm, or payment buttons.
+
+For Purolator, ShipSavvy, Canada Post, AB Courier, and Freightera, the extension currently shows a carrier pickup values panel with a copy button. Once each logged-in form is tested, we can add the same field-filling behavior carrier by carrier while still stopping before final submission.
