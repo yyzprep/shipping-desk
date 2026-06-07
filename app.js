@@ -198,8 +198,8 @@ const carrierWindowPresets = {
   ups: {
     defaultIndex: 1,
     windows: [
-      { label: "12-2", start: "12:00", end: "14:00" },
-      { label: "2-4", start: "14:00", end: "16:00" }
+      { label: "12 PM-2 PM", start: "12:00", end: "14:00" },
+      { label: "2 PM-4 PM", start: "14:00", end: "16:00" }
     ]
   },
   purolator: {

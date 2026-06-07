@@ -191,6 +191,57 @@ function clickById(id) {
   return true;
 }
 
+function clickControl(control) {
+  if (!control) return false;
+  control.focus?.();
+  control.click();
+  control.dispatchEvent(new Event("input", { bubbles: true }));
+  control.dispatchEvent(new Event("change", { bubbles: true }));
+  control.blur?.();
+  return true;
+}
+
+function clickLabelOrControlByText(patterns, root = document) {
+  const controls = [...root.querySelectorAll("input[type='checkbox'], input[type='radio'], button, label, a")]
+    .filter(isVisible);
+  const target = controls.find((control) => {
+    const text = [
+      visibleText(control),
+      control.id,
+      control.name,
+      control.value,
+      control.getAttribute("for")
+    ].filter(Boolean).join(" ").toLowerCase();
+    return patterns.some((pattern) => text.includes(pattern.toLowerCase()));
+  });
+  if (!target) return false;
+  const linked = target.tagName === "LABEL" && target.getAttribute("for")
+    ? document.getElementById(target.getAttribute("for"))
+    : target;
+  return clickControl(linked);
+}
+
+function selectUpsStandardService() {
+  clickControl(document.getElementById("domSrvButtonId"));
+  clickLabelOrControlByText(["UPS Domestic Services", "domSrvButtonId"], document.getElementById("srvModuleDiv") || document);
+  return clickLabelOrControlByText([
+    "UPS Standard",
+    "Standard",
+    "UPS Standard®",
+    "Ground"
+  ], document.getElementById("srvModuleDiv") || document);
+}
+
+function forceEnableById(ids) {
+  ids.forEach((id) => {
+    const field = document.getElementById(id);
+    if (field?.disabled) {
+      field.disabled = false;
+      field.removeAttribute("disabled");
+    }
+  });
+}
+
 function setClassicTime(prefix, timeValue) {
   if (!timeValue) return false;
   const [hourText, minuteText = "00"] = timeValue.split(":");
@@ -218,6 +269,24 @@ function fillClassicUpsPickup(booking, instruction) {
   selectById("pd1", UPS_DEFAULTS.province);
   setTextById("postalcode", UPS_DEFAULTS.postalCode);
   setTextById("addrMDPhoneId", UPS_DEFAULTS.telephone);
+  selectUpsStandardService();
+  forceEnableById([
+    "dtotalpkgs",
+    "radioWeight70Y",
+    "radioWeight70N",
+    "pickupdate",
+    "readyHours",
+    "readyMinutes",
+    "readyAMId",
+    "readyPMId",
+    "closeHours",
+    "closeMinutes",
+    "closeAMId",
+    "closePMId",
+    "pickuppoint",
+    "pickupReferenceId",
+    "spInstrId"
+  ]);
   selectById("dtotalpkgs", UPS_DEFAULTS.packages);
   clickById("radioWeight70N");
   selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
