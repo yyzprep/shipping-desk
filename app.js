@@ -351,6 +351,12 @@ function nextWorkday() {
   return dateString(date);
 }
 
+function defaultPickupDate() {
+  const date = localDate(today());
+  if (date.getDay() === 0 || date.getDay() === 6) return nextWorkday();
+  return today();
+}
+
 function formData() {
   return Object.fromEntries(new FormData(form).entries());
 }
@@ -610,7 +616,7 @@ function updatePickupDateDisplay() {
   const selectedDate = form.elements.readyDate.value;
   pickupDateLabel.textContent = formatUpsDate(selectedDate);
   dateChoiceButtons.forEach((button) => {
-    const choiceDate = button.dataset.dateChoice === "nextWorkday" ? nextWorkday() : today();
+    const choiceDate = button.dataset.dateChoice === "nextWorkday" ? nextWorkday() : defaultPickupDate();
     button.classList.toggle("active", selectedDate === choiceDate);
   });
 }
@@ -648,7 +654,7 @@ function applyCarrierDefaultWindow() {
 }
 
 function setPickupDate(choice) {
-  form.elements.readyDate.value = choice === "nextWorkday" ? nextWorkday() : today();
+  form.elements.readyDate.value = choice === "nextWorkday" ? nextWorkday() : defaultPickupDate();
   updatePickupDateDisplay();
   renderOutputs();
 }
@@ -1175,7 +1181,7 @@ function loadTemplate(id) {
 
 function clearForm() {
   form.reset();
-  form.elements.readyDate.value = today();
+  form.elements.readyDate.value = defaultPickupDate();
   form.elements.packages.value = "1";
   renderOutputs();
 }
@@ -1267,7 +1273,7 @@ historyList.addEventListener("click", (event) => {
   flash("Pickup status updated");
 });
 
-form.elements.readyDate.value = today();
+form.elements.readyDate.value = defaultPickupDate();
 renderCarriers();
 renderTemplates();
 renderOutputs();
