@@ -168,6 +168,37 @@ const carrierSections = [
   { id: "ltl", label: "LTL" }
 ];
 
+const upsPreset = {
+  trackingNumbers: [
+    "1Z0XXXXXXXXXXXXX18",
+    "1Z1XXXXXXXXXXXXX18",
+    "1Z2XXXXXXXXXXXXX18"
+  ],
+  pickupAddressLines: [
+    "YYZ PREP",
+    "25 NEWKIRK CT",
+    "BRAMPTON, ON, L6Z0B5",
+    "CA"
+  ],
+  emailAddress: "hello@yyzprep.ca",
+  companyName: "YYZ PREP",
+  contactName: "YYZ PREP",
+  country: "Canada",
+  telephone: "6472500111",
+  extension: "",
+  addressLine2: "Unit 5",
+  addressLine3: "Floor",
+  packages: "30",
+  service: "UPS Standard®",
+  earliestPickupTime: "14:00",
+  latestPickupTime: "16:00",
+  preferredPickupLocation: "Warehouse",
+  pickupReference: "",
+  yourEmailAddress: "",
+  notificationEmails: ["", "", "", "", ""],
+  personalizedMessage: ""
+};
+
 const state = {
   carrier: "ups",
   task: "pickup"
@@ -185,6 +216,9 @@ const emailDraft = document.querySelector("#emailDraft");
 const historyList = document.querySelector("#historyList");
 const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
+const upsPresetPanel = document.querySelector("#upsPresetPanel");
+const upsOutputBlock = document.querySelector("#upsOutputBlock");
+const upsValues = document.querySelector("#upsValues");
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -224,6 +258,62 @@ function flash(message) {
 
 function carrierPortal() {
   return carriers[state.carrier].portal;
+}
+
+function isUpsPickup() {
+  return state.carrier === "ups" && state.task === "pickup";
+}
+
+function upsInstructionText() {
+  const skids = form.elements.skids?.value || "2";
+  return `SPIKE pickup request for ${skids} skids`;
+}
+
+function applyUpsPreset() {
+  if (state.carrier !== "ups") return;
+
+  const values = {
+    contactName: upsPreset.contactName,
+    contactEmail: upsPreset.emailAddress,
+    phone: upsPreset.telephone,
+    pickupAddress: upsPreset.pickupAddressLines.join("\n"),
+    packages: upsPreset.packages,
+    service: "Standard",
+    weight: "",
+    dimensions: "",
+    preferredLocation: upsPreset.preferredPickupLocation,
+    upsPackages: upsPreset.packages,
+    upsService: upsPreset.service
+  };
+
+  Object.entries(values).forEach(([key, value]) => {
+    const field = form.elements[key];
+    if (!field) return;
+    const isOldPackageDefault = key === "packages" && field.value === "1";
+    if (!field.value || isOldPackageDefault) field.value = value;
+  });
+
+  if (form.elements.readyTime && !form.elements.readyTime.value) {
+    form.elements.readyTime.value = upsPreset.earliestPickupTime;
+  }
+  if (form.elements.closeTime && !form.elements.closeTime.value) {
+    form.elements.closeTime.value = upsPreset.latestPickupTime;
+  }
+  if (form.elements.skids && !form.elements.skids.value) {
+    form.elements.skids.value = "2";
+  }
+  syncUpsInstructions();
+}
+
+function syncUpsInstructions() {
+  if (state.carrier !== "ups") return;
+  const instruction = upsInstructionText();
+  if (form.elements.upsSpecialInstructions) {
+    form.elements.upsSpecialInstructions.value = instruction;
+  }
+  if (form.elements.notes) {
+    form.elements.notes.value = instruction;
+  }
 }
 
 function renderCarriers() {
@@ -280,6 +370,72 @@ function renderChecklist() {
   });
 }
 
+function formatUpsDate(dateValue) {
+  if (!dateValue) return "TBD";
+  const date = new Date(`${dateValue}T12:00:00`);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+}
+
+function formatUpsTime(timeValue) {
+  if (!timeValue) return "TBD";
+  const [hourText, minuteText] = timeValue.split(":");
+  const hour = Number(hourText);
+  const minute = minuteText || "00";
+  const displayHour = hour % 12 || 12;
+  const meridiem = hour >= 12 ? "PM" : "AM";
+  return `${String(displayHour).padStart(2, "0")}:${minute} ${meridiem}`;
+}
+
+function buildUpsValues() {
+  const data = formData();
+  const specialInstructions = data.upsSpecialInstructions || upsInstructionText();
+
+  return [
+    "1 Shipping Label Questions",
+    "Do you have pre-printed UPS Shipping Labels for your shipment?: Yes",
+    "Optional tracking numbers:",
+    upsPreset.trackingNumbers.join("\n"),
+    "",
+    "2 Pickup Information and Location",
+    "Pickup Address:",
+    upsPreset.pickupAddressLines.join("\n"),
+    `E-mail Address: ${upsPreset.emailAddress}`,
+    `Company or Name: ${upsPreset.companyName}`,
+    `Country or Territory: ${upsPreset.country}`,
+    `Contact Name: ${upsPreset.contactName}`,
+    `Telephone: ${upsPreset.telephone}`,
+    `Ext.: ${upsPreset.extension}`,
+    `Address Line 2: ${upsPreset.addressLine2}`,
+    `Address Line 3: ${upsPreset.addressLine3}`,
+    "Residential Address: No",
+    "",
+    "3 Service and Package Information",
+    `Package(s) in Your Pickup: ${data.upsPackages || upsPreset.packages}`,
+    "UPS Domestic Services: UPS Standard®",
+    "UPS International Services: None",
+    "Items that weigh more than 32 Kg.?: No",
+    "",
+    "4 Pickup Date and Time",
+    `Pickup Date: ${formatUpsDate(data.readyDate)}`,
+    `Earliest Pickup Time: ${formatUpsTime(data.readyTime || upsPreset.earliestPickupTime)}`,
+    `Latest Preferred Pickup Time: ${formatUpsTime(data.closeTime || upsPreset.latestPickupTime)}`,
+    `Preferred Pickup Location: ${data.preferredLocation || upsPreset.preferredPickupLocation}`,
+    `Pickup Reference: ${upsPreset.pickupReference}`,
+    `Special Instructions: ${specialInstructions}`,
+    "",
+    "6 Pickup Notifications",
+    `Your E-mail Address: ${upsPreset.yourEmailAddress}`,
+    "E-mail Addresses:",
+    upsPreset.notificationEmails.join("\n"),
+    `Personalized message: ${upsPreset.personalizedMessage}`
+  ].join("\n");
+}
+
 function summaryText() {
   const data = formData();
   const carrier = carriers[state.carrier].name;
@@ -300,6 +456,10 @@ function summaryText() {
     `Destination: ${data.recipient || "TBD"}`,
     `Destination address: ${data.destinationAddress || "TBD"}`,
     `Packages: ${data.packages || "1"}`,
+    ...(state.carrier === "ups" ? [
+      `Skids: ${data.skids || "2"}`,
+      `Preferred pickup location: ${data.preferredLocation || upsPreset.preferredPickupLocation}`
+    ] : []),
     `Weight: ${data.weight || "TBD"}`,
     `Dimensions: ${data.dimensions || "TBD"}`,
     `Service: ${data.service || "Standard"}`,
@@ -326,8 +486,15 @@ function buildEmailDraft() {
 }
 
 function renderOutputs() {
+  if (state.carrier === "ups") {
+    applyUpsPreset();
+  }
   renderHeader();
   renderChecklist();
+  const showUpsPreset = isUpsPickup();
+  upsPresetPanel.hidden = !showUpsPreset;
+  upsOutputBlock.hidden = !showUpsPreset;
+  upsValues.textContent = showUpsPreset ? buildUpsValues() : "";
   emailDraft.value = buildEmailDraft();
 }
 
@@ -455,10 +622,16 @@ document.querySelectorAll(".segment").forEach((button) => {
   });
 });
 
-form.addEventListener("input", renderOutputs);
+form.addEventListener("input", (event) => {
+  if (state.carrier === "ups" && event.target.name === "skids") {
+    syncUpsInstructions();
+  }
+  renderOutputs();
+});
 document.querySelector("#openPortal").addEventListener("click", () => window.open(carrierPortal(), "_blank", "noopener"));
 document.querySelector("#copySummary").addEventListener("click", () => copyText(summaryText(), "Summary"));
 document.querySelector("#copyChecklist").addEventListener("click", () => copyText([...checklist.children].map((li, index) => `${index + 1}. ${li.textContent}`).join("\n"), "Checklist"));
+document.querySelector("#copyUpsValues").addEventListener("click", () => copyText(buildUpsValues(), "UPS values"));
 document.querySelector("#copyEmail").addEventListener("click", () => copyText(emailDraft.value, "Email"));
 document.querySelector("#draftEmail").addEventListener("click", openEmailDraft);
 document.querySelector("#saveLog").addEventListener("click", saveLogEntry);

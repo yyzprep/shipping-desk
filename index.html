@@ -70,6 +70,35 @@
               <button type="button" class="ghost-button" id="clearForm">Clear</button>
             </div>
 
+            <section class="preset-panel" id="upsPresetPanel" aria-label="UPS preset details">
+              <div class="section-title">
+                <h3>UPS preset</h3>
+                <span class="preset-badge">YYZ PREP</span>
+              </div>
+              <div class="field-grid package-grid">
+                <label>
+                  <span>Skids</span>
+                  <input id="skids" name="skids" type="number" min="1" value="2">
+                </label>
+                <label>
+                  <span>Preferred pickup location</span>
+                  <input id="preferredLocation" name="preferredLocation" value="Warehouse">
+                </label>
+                <label>
+                  <span>UPS packages</span>
+                  <input id="upsPackages" name="upsPackages" type="number" min="1" value="30">
+                </label>
+                <label>
+                  <span>UPS service</span>
+                  <input id="upsService" name="upsService" value="UPS Standard®">
+                </label>
+              </div>
+              <label>
+                <span>UPS special instructions</span>
+                <textarea id="upsSpecialInstructions" name="upsSpecialInstructions" rows="2"></textarea>
+              </label>
+            </section>
+
             <div class="field-grid">
               <label>
                 <span>Reference / order</span>
@@ -168,6 +197,14 @@
                 <button class="ghost-button small" id="copyChecklist">Copy</button>
               </div>
               <ol id="checklist"></ol>
+            </div>
+
+            <div class="output-block" id="upsOutputBlock">
+              <div class="output-heading">
+                <h4>UPS booking values</h4>
+                <button class="ghost-button small" id="copyUpsValues">Copy</button>
+              </div>
+              <pre id="upsValues"></pre>
             </div>
 
             <div class="output-block">

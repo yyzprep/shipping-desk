@@ -360,6 +360,24 @@ textarea:focus {
   gap: 16px;
 }
 
+.preset-panel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #cfd9d4;
+  border-radius: 8px;
+  background: #f7faf8;
+}
+
+.preset-badge {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -456,6 +474,17 @@ ol {
   color: #34444d;
   line-height: 1.45;
   font-size: 14px;
+}
+
+pre {
+  max-height: 280px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #34444d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .saved-notice {
