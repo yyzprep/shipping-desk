@@ -254,9 +254,29 @@ const checklistBlock = document.querySelector("#checklistBlock");
 const draftEmailButton = document.querySelector("#draftEmail");
 const copySummaryButton = document.querySelector("#copySummary");
 const saveLogButton = document.querySelector("#saveLog");
+const pickupDateLabel = document.querySelector("#pickupDateLabel");
+const dateChoiceButtons = document.querySelectorAll("[data-date-choice]");
+const timeWindowButtons = document.querySelectorAll("[data-window-start][data-window-end]");
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateString(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function localDate(dateValue) {
+  return new Date(`${dateValue}T12:00:00`);
+}
+
+function nextWorkday() {
+  const date = localDate(today());
+  date.setDate(date.getDate() + 1);
+  while (date.getDay() === 0 || date.getDay() === 6) {
+    date.setDate(date.getDate() + 1);
+  }
+  return dateString(date);
 }
 
 function formData() {
@@ -364,7 +384,6 @@ function applyUpsPreset() {
 
 function syncUpsAdvancedDefaults() {
   const mappings = [
-    ["advancedPreferredLocation", "preferredLocation"],
     ["advancedUpsPackages", "upsPackages"],
     ["advancedUpsService", "upsService"]
   ];
@@ -464,6 +483,37 @@ function renderHeader() {
   referenceLabel.textContent = isCarrierPickupPreset() ? "Pickup confirmation" : "Reference / order";
   form.elements.reference.placeholder = isCarrierPickupPreset() ? "Add after booking" : "Order 1842";
   referenceField.hidden = isCarrierPickupPreset();
+}
+
+function updatePickupDateDisplay() {
+  if (!pickupDateLabel || !form.elements.readyDate.value) return;
+  const selectedDate = form.elements.readyDate.value;
+  pickupDateLabel.textContent = formatUpsDate(selectedDate);
+  dateChoiceButtons.forEach((button) => {
+    const choiceDate = button.dataset.dateChoice === "nextWorkday" ? nextWorkday() : today();
+    button.classList.toggle("active", selectedDate === choiceDate);
+  });
+}
+
+function updatePickupWindowButtons() {
+  timeWindowButtons.forEach((button) => {
+    const active = form.elements.readyTime.value === button.dataset.windowStart
+      && form.elements.closeTime.value === button.dataset.windowEnd;
+    button.classList.toggle("active", active);
+  });
+}
+
+function setPickupDate(choice) {
+  form.elements.readyDate.value = choice === "nextWorkday" ? nextWorkday() : today();
+  updatePickupDateDisplay();
+  renderOutputs();
+}
+
+function setPickupWindow(start, end) {
+  form.elements.readyTime.value = start;
+  form.elements.closeTime.value = end;
+  updatePickupWindowButtons();
+  renderOutputs();
 }
 
 function renderChecklist() {
@@ -676,6 +726,8 @@ function renderOutputs() {
   upsValues.textContent = showUpsPreset ? buildUpsValues() : "";
   purolatorValues.textContent = showPurolatorPreset ? buildPurolatorValues() : "";
   emailDraft.value = buildEmailDraft();
+  updatePickupDateDisplay();
+  updatePickupWindowButtons();
 }
 
 async function copyText(text, label) {
@@ -845,13 +897,16 @@ form.addEventListener("input", (event) => {
   if (state.carrier === "ups" && event.target.id?.startsWith("advancedUps")) {
     syncUpsAdvancedDefaults();
   }
-  if (state.carrier === "ups" && event.target.id === "advancedPreferredLocation") {
-    syncUpsAdvancedDefaults();
-  }
   if (state.carrier === "ups" && event.target.name === "skids") {
     syncUpsInstructions();
   }
   renderOutputs();
+});
+dateChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => setPickupDate(button.dataset.dateChoice));
+});
+timeWindowButtons.forEach((button) => {
+  button.addEventListener("click", () => setPickupWindow(button.dataset.windowStart, button.dataset.windowEnd));
 });
 document.querySelector("#openPortal").addEventListener("click", () => window.open(carrierPortal(), "_blank", "noopener"));
 document.querySelector("#copySummary").addEventListener("click", () => copyText(presetCopyText(), presetCopyLabel()));

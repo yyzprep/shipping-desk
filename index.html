@@ -89,10 +89,6 @@
                 <summary>Advanced defaults</summary>
                 <div class="field-grid package-grid">
                   <label>
-                    <span>Preferred pickup location</span>
-                    <input id="advancedPreferredLocation" value="Warehouse">
-                  </label>
-                  <label>
                     <span>UPS packages</span>
                     <input id="advancedUpsPackages" type="number" min="1" value="30">
                   </label>
@@ -155,10 +151,22 @@
                 <span id="referenceLabel">Reference / order</span>
                 <input id="reference" name="reference" placeholder="Order 1842">
               </label>
-              <label>
+              <div class="choice-control">
                 <span>Pickup date</span>
-                <input id="readyDate" name="readyDate" type="date">
-              </label>
+                <div class="quick-buttons" role="group" aria-label="Pickup date choices">
+                  <button type="button" class="quick-button active" data-date-choice="today">Today</button>
+                  <button type="button" class="quick-button" data-date-choice="nextWorkday">Next workday</button>
+                </div>
+                <input id="readyDate" name="readyDate" type="hidden">
+                <p class="choice-note" id="pickupDateLabel"></p>
+              </div>
+              <div class="choice-control time-window-control">
+                <span>Common windows</span>
+                <div class="quick-buttons" role="group" aria-label="Pickup time windows">
+                  <button type="button" class="quick-button" data-window-start="12:00" data-window-end="14:00">12-2</button>
+                  <button type="button" class="quick-button active" data-window-start="14:00" data-window-end="16:00">2-4</button>
+                </div>
+              </div>
               <label>
                 <span>Ready time</span>
                 <input id="readyTime" name="readyTime" type="time">
