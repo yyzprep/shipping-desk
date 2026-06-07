@@ -58,8 +58,8 @@ const carriers = {
     short: "SS",
     section: "parcel",
     color: "#176b55",
-    portal: "https://shipsavvy.com/",
-    note: "Create shipments",
+    portal: "https://my.shipsavvy.com/shipping/create",
+    note: "Create shipment orders",
     checklist: {
       pickup: [
         "Click Prepare ShipSavvy pickup and choose the relevant carrier or shipment.",
@@ -68,10 +68,10 @@ const carriers = {
         "After staff manually submits and ShipSavvy accepts it, click Mark booked."
       ],
       shipment: [
-        "Open ShipSavvy and start a new shipment.",
-        "Enter destination, package details, service level, and billing/account settings.",
-        "Buy or create the label, then paste tracking into notes.",
-        "Save the log and draft the notification email."
+        "Click Prepare ShipSavvy order.",
+        "Use the provided delivery address plus box dimensions and weight.",
+        "Confirm the ship-to/business address and shipment details on ShipSavvy.",
+        "Stop before the final buy, pay, or create-label action."
       ],
       email: [
         "Review the generated email for the ShipSavvy shipment.",
@@ -224,6 +224,15 @@ const purolatorPreset = {
   validationAction: "Click Ignore. Do not use Save Changes."
 };
 
+const shipSavvyPreset = {
+  businessAddressLines: [
+    "YYZ PREP",
+    "25 NEWKIRK CT, Unit 5",
+    "BRAMPTON, ON, L6Z 0B5",
+    "Canada"
+  ]
+};
+
 const state = {
   carrier: "ups",
   task: "pickup"
@@ -248,6 +257,8 @@ const templateSelect = document.querySelector("#templateSelect");
 const savedNotice = document.querySelector("#savedNotice");
 const referenceField = document.querySelector("#referenceField");
 const referenceLabel = document.querySelector("#referenceLabel");
+const pickupAddressLabel = document.querySelector("#pickupAddressLabel");
+const destinationAddressLabel = document.querySelector("#destinationAddressLabel");
 const upsPresetPanel = document.querySelector("#upsPresetPanel");
 const upsOutputBlock = document.querySelector("#upsOutputBlock");
 const upsValues = document.querySelector("#upsValues");
@@ -338,6 +349,10 @@ function isCarrierPickupPreset() {
 
 function isPickupOnlyCarrier() {
   return state.carrier === "ups" || state.carrier === "purolator";
+}
+
+function isShipmentDefaultCarrier() {
+  return state.carrier === "shipsavvy";
 }
 
 function setTask(task) {
@@ -446,6 +461,19 @@ function applyPurolatorPreset() {
   });
 }
 
+function applyShipSavvyPreset() {
+  if (state.carrier !== "shipsavvy") return;
+  const values = {
+    pickupAddress: shipSavvyPreset.businessAddressLines.join("\n"),
+    service: "Standard"
+  };
+
+  Object.entries(values).forEach(([key, value]) => {
+    const field = form.elements[key];
+    if (field && !field.value) field.value = value;
+  });
+}
+
 function renderCarriers() {
   if (activeOptions && activeOptions.parentElement?.id === "activeCarrierSlot") {
     simpleWorkspace.insertBefore(activeOptions, historyPanel);
@@ -498,7 +526,7 @@ function taskCopy() {
   const carrier = carriers[state.carrier].name;
   const labels = {
     pickup: ["Pickup prep", `Prepare a ${carrier} pickup`],
-    shipment: ["Shipment creation", `Create a ${carrier} shipment`],
+    shipment: ["Shipment prep", `Prepare a ${carrier} order`],
     email: ["Email drafting", `Draft a ${carrier} update`]
   };
   return labels[state.task];
@@ -512,6 +540,8 @@ function renderHeader() {
   referenceLabel.textContent = isCarrierPickupPreset() ? "Pickup confirmation" : "Reference / order";
   form.elements.reference.placeholder = isCarrierPickupPreset() ? "Add after booking" : "Order 1842";
   referenceField.hidden = isCarrierPickupPreset();
+  pickupAddressLabel.textContent = state.carrier === "shipsavvy" ? "Business / warehouse address" : "Pickup address";
+  destinationAddressLabel.textContent = state.carrier === "shipsavvy" ? "Delivery address" : "Destination address";
 }
 
 function updatePickupDateDisplay() {
@@ -725,11 +755,17 @@ function renderOutputs() {
   if (isPickupOnlyCarrier() && state.task !== "pickup") {
     setTask("pickup");
   }
+  if (isShipmentDefaultCarrier() && state.task !== "shipment") {
+    setTask("shipment");
+  }
   if (state.carrier === "ups") {
     applyUpsPreset();
   }
   if (state.carrier === "purolator") {
     applyPurolatorPreset();
+  }
+  if (state.carrier === "shipsavvy") {
+    applyShipSavvyPreset();
   }
   renderHeader();
   renderChecklist();
@@ -744,16 +780,20 @@ function renderOutputs() {
   draftEmailButton.hidden = isCarrierPickupPreset();
   document.querySelector("#openPortal").textContent = state.task === "pickup"
     ? `Prepare ${carriers[state.carrier].name} pickup`
-    : `Open ${carriers[state.carrier].name}`;
+    : state.task === "shipment"
+      ? `Prepare ${carriers[state.carrier].name} order`
+      : `Open ${carriers[state.carrier].name}`;
   copySummaryButton.textContent = isCarrierPickupPreset() ? `Copy ${carriers[state.carrier].name} values` : "Copy booking info";
-  saveLogButton.textContent = state.task === "pickup" ? "Mark booked" : "Save log";
+  saveLogButton.textContent = state.task === "pickup" ? "Mark booked" : "Mark created";
   document.querySelectorAll(".generic-fields").forEach((element) => {
     element.hidden = isCarrierPickupPreset();
   });
   document.querySelectorAll(".segment").forEach((button) => {
     const disabled = isPickupOnlyCarrier() && button.dataset.task !== "pickup";
-    button.disabled = disabled;
-    button.setAttribute("aria-disabled", String(disabled));
+    const shipmentOnly = isShipmentDefaultCarrier() && button.dataset.task !== "shipment";
+    const isDisabled = disabled || shipmentOnly;
+    button.disabled = isDisabled;
+    button.setAttribute("aria-disabled", String(isDisabled));
   });
   upsValues.textContent = showUpsPreset ? buildUpsValues() : "";
   purolatorValues.textContent = showPurolatorPreset ? buildPurolatorValues() : "";
@@ -786,6 +826,7 @@ function statusLabel(status) {
   const labels = {
     booking: "Ready for review",
     booked: "Booked",
+    created: "Created",
     missed: "Missed",
     "needs-rebook": "Needs rebook",
     "picked-up": "Picked up"
@@ -848,7 +889,7 @@ function startPickupBooking() {
   const entry = savePickupEntry(createPickupEntry("booking"));
   window.postMessage({ type: "SHIPPING_DESK_BOOKING", booking: entry }, "*");
   window.open(entry.bookingUrl, "_blank", "noopener");
-  flash(`${carriers[state.carrier].name} pickup prepared for review`);
+  flash(`${carriers[state.carrier].name} ${state.task === "shipment" ? "order" : "pickup"} prepared for review`);
 }
 
 function markBookingConfirmed() {
@@ -862,11 +903,11 @@ function markBookingConfirmed() {
   const history = getStore(storageKeys.history);
   const existing = activeBooking && history.find((entry) => entry.id === activeBooking.id);
   const entry = existing
-    ? { ...existing, status: "booked", updatedAt: new Date().toISOString(), summary: presetCopyText() }
-    : createPickupEntry("booked");
+    ? { ...existing, status: state.task === "shipment" ? "created" : "booked", updatedAt: new Date().toISOString(), summary: presetCopyText() }
+    : createPickupEntry(state.task === "shipment" ? "created" : "booked");
 
   savePickupEntry(entry);
-  flash("Pickup marked booked");
+  flash(state.task === "shipment" ? "Order marked created" : "Pickup marked booked");
 }
 
 function renderPickupSummary(history) {
@@ -941,14 +982,17 @@ function renderHistory() {
       const status = bookingStatus(entry);
       const pickupWindow = formatPickupWindow(entry);
       const skids = entry.skids ? ` · ${entry.skids} skids` : "";
+      const entryLabel = entry.task === "shipment" ? "order" : "pickup";
+      const doneStatus = entry.task === "shipment" ? "created" : "booked";
+      const doneLabel = entry.task === "shipment" ? "Created" : "Booked";
     item.innerHTML = `
       <div>
-          <strong>${carriers[entry.carrier]?.name || entry.carrier} pickup: ${pickupWindow}${skids}</strong>
+          <strong>${carriers[entry.carrier]?.name || entry.carrier} ${entryLabel}: ${pickupWindow}${skids}</strong>
           <span><span class="status-chip ${statusClass(status)}">${statusLabel(status)}</span> ${entry.reference} · ${entry.notes || "No instructions"} · updated ${date}</span>
         </div>
         <div class="history-actions">
           <button class="ghost-button small" data-copy-log="${entry.id}">Copy</button>
-          <button class="ghost-button small" data-set-status="${entry.id}" data-status="booked">Booked</button>
+          <button class="ghost-button small" data-set-status="${entry.id}" data-status="${doneStatus}">${doneLabel}</button>
           <button class="ghost-button small" data-set-status="${entry.id}" data-status="picked-up">Picked up</button>
           <button class="ghost-button small" data-set-status="${entry.id}" data-status="needs-rebook">Rebook</button>
       </div>
@@ -1013,6 +1057,9 @@ carrierList.addEventListener("click", (event) => {
   state.carrier = button.dataset.carrier;
   if (isPickupOnlyCarrier()) {
     setTask("pickup");
+  }
+  if (isShipmentDefaultCarrier()) {
+    setTask("shipment");
   }
   renderCarriers();
   renderOutputs();

@@ -205,12 +205,12 @@
             </div>
 
             <label class="generic-fields" id="pickupAddressField">
-              <span>Pickup address</span>
+              <span id="pickupAddressLabel">Pickup address</span>
               <textarea id="pickupAddress" name="pickupAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
             </label>
 
             <label class="generic-fields" id="destinationAddressField">
-              <span>Destination address</span>
+              <span id="destinationAddressLabel">Destination address</span>
               <textarea id="destinationAddress" name="destinationAddress" rows="3" placeholder="Street, unit, city, province/state, postal code"></textarea>
             </label>
 
@@ -298,9 +298,9 @@
           </aside>
         </div>
 
-        <section class="history-panel" aria-label="Pickup summary">
+        <section class="history-panel" aria-label="Shipping summary">
           <div class="section-title">
-            <h3>Pickup summary</h3>
+            <h3>Shipping summary</h3>
             <button type="button" class="ghost-button" id="clearLog">Clear summary</button>
           </div>
           <div id="pickupSummary" class="pickup-summary"></div>

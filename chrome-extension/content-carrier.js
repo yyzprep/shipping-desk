@@ -10,8 +10,9 @@ function carrierName(id) {
 }
 
 function bookingLines(booking) {
+  const itemLabel = booking.task === "shipment" ? "order" : "pickup";
   return [
-    `${carrierName(booking.carrier)} pickup`,
+    `${carrierName(booking.carrier)} ${itemLabel}`,
     `Date: ${booking.pickupDate || "Not set"}`,
     `Ready: ${booking.readyTime || "Not set"}`,
     `Close: ${booking.closeTime || "Not set"}`,
@@ -24,13 +25,14 @@ function bookingLines(booking) {
 
 function injectPanel(booking) {
   if (!booking || booking.carrier === "ups" || document.querySelector("#shipping-desk-helper")) return;
+  const itemLabel = booking.task === "shipment" ? "order" : "pickup";
 
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
-    <strong>${carrierName(booking.carrier)} pickup prep</strong>
+    <strong>${carrierName(booking.carrier)} ${itemLabel} prep</strong>
     <span>${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}</span>
-    <button type="button">Copy pickup values</button>
+    <button type="button">Copy ${itemLabel} values</button>
     <small>Prepare the page, then stop before final submit/payment.</small>
   `;
   panel.style.cssText = [

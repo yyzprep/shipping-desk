@@ -11,6 +11,7 @@
     "https://www.ups.com/*",
     "https://eshiponline.purolator.com/*",
     "https://shipsavvy.com/*",
+    "https://my.shipsavvy.com/*",
     "https://www.canadapost-postescanada.ca/*",
     "https://www.abcourier.com/*",
     "https://www.freightera.com/*"
@@ -33,6 +34,7 @@
       "matches": [
         "https://eshiponline.purolator.com/*",
         "https://shipsavvy.com/*",
+        "https://my.shipsavvy.com/*",
         "https://www.canadapost-postescanada.ca/*",
         "https://www.abcourier.com/*",
         "https://www.freightera.com/*"

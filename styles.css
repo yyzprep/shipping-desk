@@ -799,6 +799,11 @@ pre {
   color: var(--green-dark);
 }
 
+.status-chip.created {
+  background: #edf6ef;
+  color: var(--green-dark);
+}
+
 .history-item button {
   align-self: center;
 }
