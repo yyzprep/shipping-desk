@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.5";
+const HELPER_VERSION = "0.2.6";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -227,13 +227,34 @@ function checkById(id) {
   field.disabled = false;
   field.removeAttribute("disabled");
   if (!field.checked) field.click();
-  if (!field.checked) {
-    const win = field.ownerDocument?.defaultView || window;
-    const descriptor = Object.getOwnPropertyDescriptor(win.HTMLInputElement?.prototype || Object.getPrototypeOf(field), "checked");
-    descriptor?.set ? descriptor.set.call(field, true) : field.checked = true;
-    field.dispatchEvent(new Event("input", { bubbles: true }));
-    field.dispatchEvent(new Event("change", { bubbles: true }));
-  }
+  setNativeChecked(field, true);
+  return true;
+}
+
+function setNativeChecked(field, checked) {
+  if (!field) return false;
+  field.disabled = false;
+  field.removeAttribute("disabled");
+  const win = field.ownerDocument?.defaultView || window;
+  const descriptor = Object.getOwnPropertyDescriptor(win.HTMLInputElement?.prototype || Object.getPrototypeOf(field), "checked");
+  descriptor?.set ? descriptor.set.call(field, checked) : field.checked = checked;
+  field.defaultChecked = checked;
+  field.setAttribute("aria-checked", String(checked));
+  if (checked) field.setAttribute("checked", "checked");
+  else field.removeAttribute("checked");
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
+function setRadioPair(checkedId, uncheckedId) {
+  const checkedField = document.getElementById(checkedId);
+  const uncheckedField = document.getElementById(uncheckedId);
+  if (!checkedField) return false;
+  setNativeChecked(uncheckedField, false);
+  checkedField.click();
+  setNativeChecked(checkedField, true);
+  setNativeChecked(uncheckedField, false);
   return true;
 }
 
@@ -305,14 +326,20 @@ function clickLabelOrControlByText(patterns, root = document) {
 function selectUpsStandardService() {
   clickControl(document.getElementById("domSrvButtonId"));
   clickLabelOrControlByText(["UPS Domestic Services", "domSrvButtonId"], document.getElementById("srvModuleDiv") || document);
-  if (checkById("chkSrvDomId4")) return true;
+  if (checkById("chkSrvDomId4")) {
+    setTextById("selectedServices", "[011#001]");
+    return true;
+  }
   const serviceRoot = document.getElementById("domSrvDiv") || document.getElementById("srvModuleDiv") || document;
-  return clickLabelOrControlByText([
+  const clicked = clickLabelOrControlByText([
     "UPS Standard",
     "Standard",
     "UPS Standard®",
     "Ground"
   ], serviceRoot);
+  setNativeChecked(document.getElementById("chkSrvDomId4"), true);
+  setTextById("selectedServices", "[011#001]");
+  return clicked || Boolean(document.getElementById("chkSrvDomId4")?.checked);
 }
 
 function setClassicTime(prefix, timeValue) {
@@ -327,7 +354,7 @@ function setClassicTime(prefix, timeValue) {
   const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
   selectById(hourId, String(hour));
   selectById(minuteId, String(Number(minuteText)));
-  checkById(meridiem === "PM" ? pmId : amId);
+  setRadioPair(meridiem === "PM" ? pmId : amId, meridiem === "PM" ? amId : pmId);
   return true;
 }
 
