@@ -31,6 +31,7 @@ function injectPanel(booking) {
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
+    <button type="button" data-helper-close aria-label="Close Assistant Hub helper">x</button>
     <strong>${carrierName(booking.carrier)} ${itemLabel} prep</strong>
     <span>${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}</span>
     <button type="button">Copy ${itemLabel} values</button>
@@ -44,7 +45,7 @@ function injectPanel(booking) {
     "display:grid",
     "gap:6px",
     "max-width:280px",
-    "padding:12px",
+    "padding:18px 12px 12px",
     "border:1px solid #d9e0e4",
     "border-radius:8px",
     "background:#fff",
@@ -52,9 +53,13 @@ function injectPanel(booking) {
     "font:13px system-ui,sans-serif",
     "color:#172026"
   ].join(";");
-  panel.querySelector("button").style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
+  panel.querySelector("[data-helper-close]").style.cssText = "position:absolute;top:5px;left:5px;width:17px;height:17px;border:0;border-radius:4px;background:transparent;color:#63717b;font-size:12px;line-height:17px;font-weight:700;padding:0;cursor:pointer";
+  panel.querySelector("button:not([data-helper-close])").style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
   panel.querySelector("small").style.cssText = "color:#63717b;line-height:1.35";
-  panel.querySelector("button").addEventListener("click", () => {
+  panel.querySelector("[data-helper-close]").addEventListener("click", () => {
+    panel.remove();
+  });
+  panel.querySelector("button:not([data-helper-close])").addEventListener("click", () => {
     navigator.clipboard.writeText(bookingLines(booking).join("\n"));
   });
   document.body.append(panel);

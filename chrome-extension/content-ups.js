@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.5";
+const HELPER_VERSION = "0.3.6";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -935,6 +935,7 @@ function injectPanel(booking) {
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
+    <button type="button" data-helper-close aria-label="Close Assistant Hub helper">x</button>
     <strong>Assistant Hub Helper v${HELPER_VERSION} <span data-helper-badge>WAITING</span></strong>
     ${sessionEnded ? `<button type="button" data-ups-action="restart">Restart UPS pickup</button>` : ""}
     ${loginRequired ? `<button type="button" data-ups-action="resume">Resume UPS pickup</button>` : ""}
@@ -952,7 +953,7 @@ function injectPanel(booking) {
     "display:grid",
     "gap:12px",
     "width:min(430px, calc(100vw - 32px))",
-    "padding:18px",
+    "padding:22px 18px 18px",
     "border:2px solid #172026",
     "border-radius:8px",
     "background:#fff",
@@ -961,6 +962,7 @@ function injectPanel(booking) {
     "color:#172026"
   ].join(";");
   panel.querySelectorAll("button").forEach((button) => {
+    if (button.dataset.helperClose !== undefined) return;
     const isDebug = button.dataset.upsAction === "debug";
     button.style.cssText = [
       "min-height:58px",
@@ -975,12 +977,32 @@ function injectPanel(booking) {
       "box-shadow:0 6px 14px rgba(0,0,0,.14)"
     ].join(";");
   });
+  panel.querySelector("[data-helper-close]").style.cssText = [
+    "position:absolute",
+    "top:6px",
+    "left:6px",
+    "width:18px",
+    "height:18px",
+    "border:0",
+    "border-radius:4px",
+    "background:transparent",
+    "color:#63717b",
+    "font-size:13px",
+    "line-height:18px",
+    "font-weight:700",
+    "padding:0",
+    "cursor:pointer"
+  ].join(";");
   panel.querySelector("strong").style.cssText = "display:grid;gap:8px;font-size:14px;color:#63717b";
   panel.querySelector("[data-helper-badge]").style.cssText = "display:block;width:max-content;padding:8px 12px;border-radius:999px;background:#f2c94c;color:#172026;font-size:16px;font-weight:1000;letter-spacing:.04em";
   panel.querySelector("[data-helper-summary]").style.cssText = "font-size:15px;font-weight:800;color:#172026";
   panel.querySelector("small").style.cssText = "color:#172026;line-height:1.35;font-size:18px;font-weight:800";
   panel.dataset.state = paymentOrReview ? "ready" : "idle";
   panel.addEventListener("click", (event) => {
+    if (event.target.closest("[data-helper-close]")) {
+      panel.remove();
+      return;
+    }
     const button = event.target.closest("[data-ups-action]");
     if (!button) return;
     if (button.disabled) return;
