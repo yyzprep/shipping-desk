@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.1";
+const HELPER_VERSION = "0.3.2";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -819,31 +819,44 @@ function injectPanel(booking) {
     <button type="button" data-ups-action="fill">${paymentOrReview ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
     ${paymentOrReview || sessionEnded || loginRequired ? "" : `<button type="button" data-ups-action="next">Show UPS Next</button>`}
     <button type="button" data-ups-action="debug">Copy UPS debug</button>
-    <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
+    <span data-helper-summary>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
     <small>${loginRequired ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : sessionEnded ? "UPS ended this pickup session. Restart opens a fresh pickup page and keeps this booking attached." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait for Ready, then click Show UPS Next and manually click UPS's highlighted Next button." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
-    "right:16px",
-    "bottom:16px",
+    "right:24px",
+    "bottom:24px",
     "z-index:2147483647",
     "display:grid",
-    "gap:6px",
-    "max-width:300px",
-    "padding:10px",
-    "border:1px solid #d9e0e4",
+    "gap:12px",
+    "width:min(430px, calc(100vw - 32px))",
+    "padding:18px",
+    "border:2px solid #172026",
     "border-radius:8px",
     "background:#fff",
-    "box-shadow:0 12px 30px rgba(0,0,0,.18)",
-    "font:13px system-ui,sans-serif",
+    "box-shadow:0 18px 48px rgba(0,0,0,.28)",
+    "font:16px system-ui,sans-serif",
     "color:#172026"
   ].join(";");
   panel.querySelectorAll("button").forEach((button) => {
-    button.style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
+    const isDebug = button.dataset.upsAction === "debug";
+    button.style.cssText = [
+      "min-height:58px",
+      "border:0",
+      "border-radius:8px",
+      `background:${isDebug ? "#eef2f4" : "#176b55"}`,
+      `color:${isDebug ? "#172026" : "#fff"}`,
+      "font-size:18px",
+      "font-weight:900",
+      "padding:0 18px",
+      "cursor:pointer",
+      "box-shadow:0 6px 14px rgba(0,0,0,.14)"
+    ].join(";");
   });
-  panel.querySelector("strong").style.cssText = "font-size:12px;color:#63717b";
-  panel.querySelector("[data-helper-badge]").style.cssText = "float:right;margin-left:8px;padding:2px 6px;border-radius:999px;background:#f2c94c;color:#172026;font-size:10px;font-weight:900";
-  panel.querySelector("small").style.cssText = "color:#63717b;line-height:1.35";
+  panel.querySelector("strong").style.cssText = "display:grid;gap:8px;font-size:14px;color:#63717b";
+  panel.querySelector("[data-helper-badge]").style.cssText = "display:block;width:max-content;padding:8px 12px;border-radius:999px;background:#f2c94c;color:#172026;font-size:16px;font-weight:1000;letter-spacing:.04em";
+  panel.querySelector("[data-helper-summary]").style.cssText = "font-size:15px;font-weight:800;color:#172026";
+  panel.querySelector("small").style.cssText = "color:#172026;line-height:1.35;font-size:18px;font-weight:800";
   panel.dataset.state = paymentOrReview ? "ready" : "idle";
   panel.addEventListener("click", (event) => {
     const button = event.target.closest("[data-ups-action]");
