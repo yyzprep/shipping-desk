@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.5";
+const HELPER_VERSION = "0.3.6";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -315,6 +315,17 @@ function enableClassicPickupControls() {
   });
 }
 
+function keepOriginalUpsAddress() {
+  const originalAddress = document.getElementById("origSuggestId");
+  const suggestedAddress = document.getElementById("radioUseFromList");
+  if (!originalAddress) return false;
+  setNativeChecked(suggestedAddress, false);
+  originalAddress.click();
+  setNativeChecked(originalAddress, true);
+  setNativeChecked(suggestedAddress, false);
+  return true;
+}
+
 function clickControl(control) {
   if (!control) return false;
   control.focus?.();
@@ -450,7 +461,9 @@ function fillClassicUpsPickup(booking, instruction) {
   setTextById("addrMDCustNameId", UPS_DEFAULTS.contactName);
   setTextById("addressId", UPS_DEFAULTS.addressLine1);
   setTextById("addrMDRoomId", UPS_DEFAULTS.addressLine2);
+  setTextById("roomID", UPS_DEFAULTS.addressLine2);
   setTextById("addrMDFloorId", UPS_DEFAULTS.addressLine3);
+  setTextById("floorID", UPS_DEFAULTS.addressLine3);
   setTextById("pd2Id", UPS_DEFAULTS.city);
   selectById("pd1", UPS_DEFAULTS.province);
   setTextById("postalcode", UPS_DEFAULTS.postalCode);
@@ -465,6 +478,7 @@ function fillClassicUpsPickup(booking, instruction) {
   setClassicTime("close", booking.closeTime);
   selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
   setTextById("spInstrId", instruction);
+  keepOriginalUpsAddress();
   return standardSelected;
 }
 
@@ -488,6 +502,7 @@ function stabilizeClassicUpsPickup(booking, instruction) {
     setClassicTime("close", booking.closeTime);
     selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
     setTextById("spInstrId", instruction);
+    keepOriginalUpsAddress();
     if (pass >= 12) {
       window.clearInterval(upsStabilizerTimer);
       upsStabilizerTimer = null;
@@ -627,7 +642,7 @@ function persistBookingForUps(booking) {
 }
 
 function freshUpsPickupUrl(booking) {
-  const url = new URL("https://wwwapps.ups.com/pickup/schedule");
+  const url = new URL("https://wwwapps.ups.com/pickup/request");
   url.searchParams.set("loc", "en_CA");
   url.searchParams.set("client", "IPR");
   url.searchParams.set("assistantHubRun", Date.now().toString());
@@ -693,8 +708,11 @@ function installUpsNextPreSubmitRefresh(nextButton, booking) {
     setClassicTime("close", booking.closeTime);
     selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
     setTextById("addrMDRoomId", UPS_DEFAULTS.addressLine2);
+    setTextById("roomID", UPS_DEFAULTS.addressLine2);
     setTextById("addrMDFloorId", UPS_DEFAULTS.addressLine3);
+    setTextById("floorID", UPS_DEFAULTS.addressLine3);
     setTextById("spInstrId", instruction);
+    keepOriginalUpsAddress();
     saveUpsSubmitSnapshot(booking, "real-ups-next-click");
   }, true);
 }
@@ -727,6 +745,7 @@ function classicSubmitSnapshot(booking, trigger) {
     url: location.href,
     pageStage: upsPageStage(),
     fillMatches: booking?.carrier === "ups" ? upsClassicFillMatches(booking) : false,
+    addressSuggestion: upsAddressSuggestionSnapshot(),
     booking,
     fields: classicPickupFieldsSnapshot(),
     forms: [...document.forms].map((form, index) => ({
@@ -738,6 +757,19 @@ function classicSubmitSnapshot(booking, trigger) {
       elementCount: form.elements.length,
       elements: [...form.elements].slice(0, 320).map(formElementSnapshot)
     })).slice(0, 10)
+  };
+}
+
+function upsAddressSuggestionSnapshot() {
+  const original = document.getElementById("origSuggestId");
+  const suggested = document.getElementById("radioUseFromList");
+  const replacement = document.querySelector('select[name="repl_name"]');
+  return {
+    exists: Boolean(original || suggested || replacement),
+    originalChecked: Boolean(original?.checked),
+    suggestedChecked: Boolean(suggested?.checked),
+    replacementValue: replacement?.value || "",
+    replacementText: replacement?.options?.[replacement.selectedIndex]?.textContent?.trim() || ""
   };
 }
 
@@ -753,7 +785,9 @@ function classicPickupFieldIds() {
     "addrMDCustNameId",
     "addressId",
     "addrMDRoomId",
+    "roomID",
     "addrMDFloorId",
+    "floorID",
     "pd2Id",
     "pd1",
     "postalcode",
@@ -772,7 +806,9 @@ function classicPickupFieldIds() {
     "pickuppoint",
     "spInstrId",
     "chkSrvDomId4",
-    "radioWeight70N"
+    "radioWeight70N",
+    "radioUseFromList",
+    "origSuggestId"
   ];
 }
 
@@ -876,6 +912,7 @@ function upsDebugSnapshot(booking) {
     isUpsSessionEndedPage: isUpsSessionEndedPage(),
     isUpsLoginPage: isUpsLoginPage(),
     fillMatches: booking?.carrier === "ups" && isClassicPickupPage() ? upsClassicFillMatches(booking) : false,
+    addressSuggestion: upsAddressSuggestionSnapshot(),
     lastSubmitSnapshot: readSavedUpsSubmitSnapshot(),
     bodyTextSample: document.body?.innerText?.trim().replace(/\s+/g, " ").slice(0, 1200) || "",
     domSrvDivText: serviceRoot?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || "",
