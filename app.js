@@ -331,11 +331,21 @@ function makeId() {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return dateString(new Date());
+}
+
+function minutesFromTime(timeValue) {
+  if (!timeValue) return null;
+  const [hourText, minuteText = "0"] = timeValue.split(":");
+  return Number(hourText) * 60 + Number(minuteText);
 }
 
 function dateString(date) {
-  return date.toISOString().slice(0, 10);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("-");
 }
 
 function localDate(dateValue) {
@@ -355,6 +365,53 @@ function defaultPickupDate() {
   const date = localDate(today());
   if (date.getDay() === 0 || date.getDay() === 6) return nextWorkday();
   return today();
+}
+
+function nextWorkdayFrom(dateValue) {
+  const date = localDate(dateValue || today());
+  date.setDate(date.getDate() + 1);
+  while (date.getDay() === 0 || date.getDay() === 6) {
+    date.setDate(date.getDate() + 1);
+  }
+  return dateString(date);
+}
+
+function normalizeUpsPickupWindow(data, now = new Date()) {
+  if (state.carrier !== "ups" || state.task !== "pickup") return { data, adjusted: false, message: "" };
+
+  const normalized = { ...data };
+  const currentDate = dateString(now);
+  const requestedDate = normalized.readyDate || defaultPickupDate();
+  const readyMinutes = minutesFromTime(normalized.readyTime || upsPreset.earliestPickupTime);
+  const closeMinutes = minutesFromTime(normalized.closeTime || upsPreset.latestPickupTime);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const sameDayLeadMinutes = 20;
+  const minimumWindowMinutes = 120;
+  const minimumReady = nowMinutes + sameDayLeadMinutes;
+
+  normalized.readyDate = requestedDate;
+  normalized.readyTime = normalized.readyTime || upsPreset.earliestPickupTime;
+  normalized.closeTime = normalized.closeTime || upsPreset.latestPickupTime;
+
+  if (requestedDate !== currentDate) {
+    return { data: normalized, adjusted: false, message: "" };
+  }
+
+  const requestedWindowIsSelectable = readyMinutes !== null
+    && closeMinutes !== null
+    && readyMinutes >= minimumReady
+    && closeMinutes - readyMinutes >= minimumWindowMinutes;
+
+  if (requestedWindowIsSelectable) {
+    return { data: normalized, adjusted: false, message: "" };
+  }
+
+  normalized.readyDate = nextWorkdayFrom(currentDate);
+  return {
+    data: normalized,
+    adjusted: true,
+    message: `UPS cannot keep ${formatUpsTime(normalized.readyTime)}-${formatUpsTime(normalized.closeTime)} for today once the ready time is too close or past. Moved it to ${formatUpsDate(normalized.readyDate)}.`
+  };
 }
 
 function formData() {
@@ -1035,13 +1092,30 @@ function bookingUrlWithPayload(entry) {
   return url.toString();
 }
 
+function applyNormalizedPickupData(data) {
+  ["readyDate", "readyTime", "closeTime"].forEach((name) => {
+    if (form.elements[name] && data[name] !== undefined) {
+      form.elements[name].value = data[name];
+    }
+  });
+  updatePickupDateDisplay();
+  updatePickupWindowButtons();
+}
+
 async function startPickupBooking() {
+  const normalized = normalizeUpsPickupWindow(formData());
+  if (normalized.adjusted) {
+    applyNormalizedPickupData(normalized.data);
+    renderOutputs();
+  }
   const entry = savePickupEntry(createPickupEntry("booking"));
   const bookingTab = window.open("about:blank", "_blank");
   if (bookingTab) {
     bookingTab.name = `assistantHubBooking:${encodeURIComponent(JSON.stringify(entry))}`;
   }
-  flash(`${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
+  flash(normalized.adjusted
+    ? normalized.message
+    : `${carriers[state.carrier].name} ${actionTypeLabel()} prepared for review`);
   await saveBookingForExtension(entry);
   if (bookingTab) {
     bookingTab.location.href = bookingUrlWithPayload(entry);
@@ -1316,3 +1390,13 @@ renderCarriers();
 renderTemplates();
 renderOutputs();
 renderHistory();
+
+window.AssistantHubDebug = {
+  normalizeUpsPickupWindow,
+  minutesFromTime,
+  today,
+  nextWorkday,
+  nextWorkdayFrom,
+  formatUpsDate,
+  formatUpsTime
+};

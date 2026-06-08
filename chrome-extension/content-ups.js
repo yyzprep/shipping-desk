@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.7";
+const HELPER_VERSION = "0.2.8";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -356,18 +356,48 @@ function selectUpsStandardService() {
 
 function setClassicTime(prefix, timeValue) {
   if (!timeValue) return false;
-  const [hourText, minuteText = "00"] = timeValue.split(":");
-  let hour = Number(hourText);
-  const meridiem = hour >= 12 ? "PM" : "AM";
-  hour = hour % 12 || 12;
+  const { hour, minute, meridiem } = classicTimeParts(timeValue);
   const hourId = prefix === "ready" ? "readyHours" : "closeHours";
   const minuteId = prefix === "ready" ? "readyMinutes" : "closeMinutes";
   const amId = prefix === "ready" ? "readyAMId" : "closeAMId";
   const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
   selectById(hourId, String(hour));
-  selectById(minuteId, String(Number(minuteText)));
+  selectById(minuteId, String(minute));
   setRadioPair(meridiem === "PM" ? pmId : amId, meridiem === "PM" ? amId : pmId);
   return true;
+}
+
+function classicTimeParts(timeValue) {
+  const [hourText, minuteText = "00"] = timeValue.split(":");
+  let hour = Number(hourText);
+  const meridiem = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return { hour, minute: Number(minuteText), meridiem };
+}
+
+function classicTimeMatches(prefix, timeValue) {
+  if (!timeValue) return true;
+  const { hour, minute, meridiem } = classicTimeParts(timeValue);
+  const hourId = prefix === "ready" ? "readyHours" : "closeHours";
+  const minuteId = prefix === "ready" ? "readyMinutes" : "closeMinutes";
+  const amId = prefix === "ready" ? "readyAMId" : "closeAMId";
+  const pmId = prefix === "ready" ? "readyPMId" : "closePMId";
+  return document.getElementById(hourId)?.value === String(hour)
+    && document.getElementById(minuteId)?.value === String(minute)
+    && Boolean(document.getElementById(meridiem === "PM" ? pmId : amId)?.checked);
+}
+
+function classicDateMatches(dateValue) {
+  if (!dateValue) return true;
+  return document.getElementById("pickupdate")?.value === formatClassicDateValue(dateValue);
+}
+
+function upsClassicFillMatches(booking) {
+  return Boolean(document.getElementById("chkSrvDomId4")?.checked)
+    && classicDateMatches(booking.pickupDate)
+    && classicTimeMatches("ready", booking.readyTime)
+    && classicTimeMatches("close", booking.closeTime)
+    && document.getElementById("pickuppoint")?.value === UPS_DEFAULTS.preferredLocation;
 }
 
 function fillClassicUpsPickup(booking, instruction) {
@@ -416,9 +446,7 @@ function stabilizeClassicUpsPickup(booking, instruction) {
     if (pass >= 12) {
       window.clearInterval(upsStabilizerTimer);
       upsStabilizerTimer = null;
-      const standard = document.getElementById("chkSrvDomId4")?.checked;
-      const readyPm = document.getElementById("readyPMId")?.checked;
-      updateHelperStatus(standard && readyPm ? "UPS fields held steady. Review, then click Go to UPS review." : "Filled again, but UPS is still resetting one field. Copy UPS debug.");
+      updateHelperStatus(upsClassicFillMatches(booking) ? "UPS fields held steady. Review, then click Go to UPS review." : "UPS changed the requested date/time after fill. This usually means the requested same-day window is no longer available.");
     }
   };
 
