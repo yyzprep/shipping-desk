@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.4";
+const HELPER_VERSION = "0.3.5";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -416,12 +416,31 @@ function classicDateMatches(dateValue) {
   return document.getElementById("pickupdate")?.value === formatClassicDateValue(dateValue);
 }
 
+function fieldValueMatches(id, expected) {
+  return String(document.getElementById(id)?.value || "").trim() === String(expected).trim();
+}
+
+function instructionForBooking(booking) {
+  return `SPIKE pickup request for ${booking?.skids || "2"} skids`;
+}
+
 function upsClassicFillMatches(booking) {
   return Boolean(document.getElementById("chkSrvDomId4")?.checked)
+    && fieldValueMatches("addrMDCompanyId", UPS_DEFAULTS.companyName)
+    && fieldValueMatches("addrMDCustNameId", UPS_DEFAULTS.contactName)
+    && fieldValueMatches("addressId", UPS_DEFAULTS.addressLine1)
+    && fieldValueMatches("addrMDRoomId", UPS_DEFAULTS.addressLine2)
+    && fieldValueMatches("addrMDFloorId", UPS_DEFAULTS.addressLine3)
+    && fieldValueMatches("pd2Id", UPS_DEFAULTS.city)
+    && fieldValueMatches("postalcode", UPS_DEFAULTS.postalCode)
+    && fieldValueMatches("addrMDPhoneId", UPS_DEFAULTS.telephone)
+    && fieldValueMatches("dtotalpkgs", UPS_DEFAULTS.packages)
+    && fieldValueMatches("selectedServices", "[011#001]")
     && classicDateMatches(booking.pickupDate)
     && classicTimeMatches("ready", booking.readyTime)
     && classicTimeMatches("close", booking.closeTime)
-    && document.getElementById("pickuppoint")?.value === UPS_DEFAULTS.preferredLocation;
+    && document.getElementById("pickuppoint")?.value === UPS_DEFAULTS.preferredLocation
+    && fieldValueMatches("spInstrId", instructionForBooking(booking));
 }
 
 function fillClassicUpsPickup(booking, instruction) {
@@ -514,7 +533,7 @@ function fillTime(label, timeValue) {
 
 function fillUpsPickup(booking) {
   const skids = booking.skids || "2";
-  const instruction = `SPIKE pickup request for ${skids} skids`;
+  const instruction = instructionForBooking(booking);
 
   clearUpsOverlays();
   if (isClassicPickupPage()) {
@@ -589,7 +608,7 @@ function runUpsAutomation(booking) {
       confirmClassicView();
     } else {
       const standardSelected = fillUpsPickup(booking);
-      const instruction = `SPIKE pickup request for ${booking.skids || "2"} skids`;
+      const instruction = instructionForBooking(booking);
       stabilizeClassicUpsPickup(booking, instruction);
       if (!standardSelected) {
         setHelperState("working", "Filled page 1. Waiting for UPS Standard to stabilize...");
@@ -654,8 +673,123 @@ function showUpsNextForManualClick(booking) {
   nextButton.style.outline = "4px solid #176b55";
   nextButton.style.outlineOffset = "4px";
   nextButton.style.boxShadow = "0 0 0 8px rgba(23,107,85,.22)";
-  setHelperState("ready", "Now click the highlighted UPS Next button on the UPS page. Do not use the helper for this step.");
+  installUpsNextPreSubmitRefresh(nextButton, booking);
+  setHelperState("ready", "Now click the highlighted UPS Next button. The helper will refresh fields during that click.");
   return true;
+}
+
+function installUpsNextPreSubmitRefresh(nextButton, booking) {
+  if (!nextButton || nextButton.dataset.assistantHubPreSubmit === HELPER_VERSION) return;
+  nextButton.dataset.assistantHubPreSubmit = HELPER_VERSION;
+  nextButton.addEventListener("click", () => {
+    if (!booking || booking.carrier !== "ups" || !isClassicPickupPage()) return;
+    const instruction = instructionForBooking(booking);
+    fillClassicUpsPickup(booking, instruction);
+    enableClassicPickupControls();
+    selectUpsStandardService();
+    setTextById("selectedServices", "[011#001]");
+    selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
+    setClassicTime("ready", booking.readyTime);
+    setClassicTime("close", booking.closeTime);
+    selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
+    setTextById("addrMDRoomId", UPS_DEFAULTS.addressLine2);
+    setTextById("addrMDFloorId", UPS_DEFAULTS.addressLine3);
+    setTextById("spInstrId", instruction);
+    saveUpsSubmitSnapshot(booking, "real-ups-next-click");
+  }, true);
+}
+
+function readSavedUpsSubmitSnapshot() {
+  try {
+    return JSON.parse(sessionStorage.getItem("assistantHubLastUpsSubmit") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveUpsSubmitSnapshot(booking, trigger) {
+  try {
+    const snapshot = classicSubmitSnapshot(booking, trigger);
+    sessionStorage.setItem("assistantHubLastUpsSubmit", JSON.stringify(snapshot));
+    document.body.dataset.assistantHubLastSubmitVersion = snapshot.helperVersion;
+    document.body.dataset.assistantHubLastSubmitTrigger = snapshot.trigger;
+    document.body.dataset.assistantHubLastSubmitMatches = String(snapshot.fillMatches);
+  } catch (error) {
+    console.warn("Assistant Hub could not save UPS submit snapshot", error);
+  }
+}
+
+function classicSubmitSnapshot(booking, trigger) {
+  return {
+    at: new Date().toISOString(),
+    trigger,
+    helperVersion: HELPER_VERSION,
+    url: location.href,
+    pageStage: upsPageStage(),
+    fillMatches: booking?.carrier === "ups" ? upsClassicFillMatches(booking) : false,
+    booking,
+    fields: classicPickupFieldsSnapshot(),
+    forms: [...document.forms].map((form, index) => ({
+      index,
+      id: form.id || "",
+      name: form.name || "",
+      action: form.action || "",
+      method: form.method || "",
+      elementCount: form.elements.length,
+      elements: [...form.elements].slice(0, 320).map(formElementSnapshot)
+    })).slice(0, 10)
+  };
+}
+
+function classicPickupFieldsSnapshot() {
+  return classicPickupFieldIds().map((id) => formElementSnapshot(document.getElementById(id), id));
+}
+
+function classicPickupFieldIds() {
+  return [
+    "radioShippingY",
+    "trkNbrAreaId",
+    "addrMDCompanyId",
+    "addrMDCustNameId",
+    "addressId",
+    "addrMDRoomId",
+    "addrMDFloorId",
+    "pd2Id",
+    "pd1",
+    "postalcode",
+    "addrMDPhoneId",
+    "dtotalpkgs",
+    "selectedServices",
+    "pickupdate",
+    "readyHours",
+    "readyMinutes",
+    "readyAMId",
+    "readyPMId",
+    "closeHours",
+    "closeMinutes",
+    "closeAMId",
+    "closePMId",
+    "pickuppoint",
+    "spInstrId",
+    "chkSrvDomId4",
+    "radioWeight70N"
+  ];
+}
+
+function formElementSnapshot(element, fallbackId = "") {
+  if (!element) {
+    return { id: fallbackId, exists: false };
+  }
+  return {
+    tag: element.tagName,
+    type: element.type || "",
+    id: element.id || fallbackId,
+    name: element.name || "",
+    value: element.value || "",
+    text: visibleText(element).slice(0, 160),
+    disabled: Boolean(element.disabled),
+    checked: Boolean(element.checked)
+  };
 }
 
 function updateHelperStatus(message) {
@@ -714,32 +848,7 @@ function upsDebugSnapshot(booking) {
       disabled: Boolean(element.disabled),
       checked: Boolean(element.checked)
     }));
-  const fields = [
-    "radioShippingY",
-    "trkNbrAreaId",
-    "addrMDCompanyId",
-    "addrMDCustNameId",
-    "addressId",
-    "addrMDRoomId",
-    "addrMDFloorId",
-    "pd2Id",
-    "pd1",
-    "postalcode",
-    "addrMDPhoneId",
-    "dtotalpkgs",
-    "selectedServices",
-    "pickupdate",
-    "readyHours",
-    "readyMinutes",
-    "readyAMId",
-    "readyPMId",
-    "closeHours",
-    "closeMinutes",
-    "closeAMId",
-    "closePMId",
-    "pickuppoint",
-    "spInstrId"
-  ].map((id) => {
+  const fields = classicPickupFieldIds().map((id) => {
     const element = document.getElementById(id);
     return {
       id,
@@ -766,6 +875,8 @@ function upsDebugSnapshot(booking) {
     isUpsPaymentOrReviewPage: isUpsPaymentOrReviewPage(),
     isUpsSessionEndedPage: isUpsSessionEndedPage(),
     isUpsLoginPage: isUpsLoginPage(),
+    fillMatches: booking?.carrier === "ups" && isClassicPickupPage() ? upsClassicFillMatches(booking) : false,
+    lastSubmitSnapshot: readSavedUpsSubmitSnapshot(),
     bodyTextSample: document.body?.innerText?.trim().replace(/\s+/g, " ").slice(0, 1200) || "",
     domSrvDivText: serviceRoot?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || "",
     domSrvDivHtml: serviceRoot?.innerHTML?.slice(0, 1500) || "",
@@ -831,7 +942,7 @@ function injectPanel(booking) {
     ${paymentOrReview || sessionEnded || loginRequired ? "" : `<button type="button" data-ups-action="next">Show UPS Next</button>`}
     <button type="button" data-ups-action="debug">Copy UPS debug</button>
     <span data-helper-summary>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
-    <small>${loginRequired ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : sessionEnded ? "UPS ended this pickup session. Restart opens a fresh pickup page and keeps this booking attached." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait for Ready, then click Show UPS Next and manually click UPS's highlighted Next button." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
+    <small>${loginRequired ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : sessionEnded ? "UPS rejected this session. Click Restart UPS pickup or Copy UPS debug so Codex can inspect the pre-submit snapshot." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait for Ready, then click Show UPS Next and manually click UPS's highlighted Next button." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -880,7 +991,7 @@ function injectPanel(booking) {
     if (button.dataset.upsAction === "debug") copyUpsDebug(booking);
   });
   document.body.append(panel);
-  setHelperState(loginRequired ? "login" : paymentOrReview ? "ready" : "idle", loginRequired ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : sessionEnded ? "UPS ended this pickup session. Restart opens a fresh pickup page and keeps this booking attached." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait until this says Ready before clicking Show UPS Next." : "Submit from Assistant Hub again if this should be a UPS pickup.");
+  setHelperState(loginRequired ? "login" : paymentOrReview ? "ready" : "idle", loginRequired ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : sessionEnded ? "UPS rejected this session. Click Restart UPS pickup or Copy UPS debug so Codex can inspect the pre-submit snapshot." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait until this says Ready before clicking Show UPS Next." : "Submit from Assistant Hub again if this should be a UPS pickup.");
 }
 
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
@@ -892,7 +1003,7 @@ chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBoo
     && !isUpsLoginPage()
     && !isUpsSessionEndedPage()
     && !isUpsPaymentOrReviewPage();
-  setHelperState(isUpsLoginPage() ? "login" : isUpsPaymentOrReviewPage() ? "ready" : isUpsSessionEndedPage() ? "blocked" : pendingBooking?.autoFill ? "working" : "idle", isUpsLoginPage() ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : pendingBooking?.autoFill ? "Auto-fill starting. UPS may switch to Classic first. Wait for Ready." : "Loaded. Click Fill UPS once, then wait for Ready.");
+  setHelperState(isUpsLoginPage() ? "login" : isUpsPaymentOrReviewPage() ? "ready" : isUpsSessionEndedPage() ? "blocked" : pendingBooking?.autoFill ? "working" : "idle", isUpsLoginPage() ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : isUpsSessionEndedPage() ? "UPS rejected this session. Copy UPS debug before restarting if this keeps happening." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : pendingBooking?.autoFill ? "Auto-fill starting. UPS may switch to Classic first. Wait for Ready." : "Loaded. Click Fill UPS once, then wait for Ready.");
   if (shouldAutoFill) {
     upsAutoFillStarted = true;
     window.setTimeout(() => runUpsAutomation(pendingBooking), 700);
