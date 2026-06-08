@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.4";
+const HELPER_VERSION = "0.2.5";
 let upsAutomationTimer = null;
 let upsAutomationStarted = false;
 
@@ -169,7 +169,12 @@ function confirmClassicView() {
 }
 
 function isClassicPickupPage() {
-  return location.href.includes("client=IPR") || textIncludes(document.body, "Enter Pickup Information");
+  return !isUpsSessionEndedPage()
+    && !isUpsPaymentOrReviewPage()
+    && (Boolean(document.getElementById("addrMDCompanyId"))
+      || Boolean(document.getElementById("radioShippingY"))
+      || textIncludes(document.body, "Enter Pickup Information")
+      || textIncludes(document.body, "Shipping Label Questions"));
 }
 
 function isUpsPaymentOrReviewPage() {
@@ -178,7 +183,15 @@ function isUpsPaymentOrReviewPage() {
     || textIncludes(document.body, "Select Payment Method");
 }
 
+function isUpsSessionEndedPage() {
+  return textIncludes(document.body, "session has ended")
+    || textIncludes(document.body, "no information has been entered for thirty minutes")
+    || textIncludes(document.body, "Please try again. (9001)")
+    || textIncludes(document.body, "On-Call Pickup session has ended");
+}
+
 function upsPageStage() {
+  if (isUpsSessionEndedPage()) return "session_expired";
   if (isUpsPaymentOrReviewPage()) return "payment_or_review";
   if (isClassicPickupPage()) return "pickup_entry";
   if (textIncludes(document.body, "Use Classic App") || textIncludes(document.body, "Use Classic View")) return "modern_entry";
@@ -414,6 +427,11 @@ function fillUpsPickup(booking) {
 
 function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
+  persistBookingForUps(booking);
+  if (isUpsSessionEndedPage()) {
+    updateHelperStatus("UPS ended this pickup session. Click Restart UPS pickup, then Fill UPS after the page loads.");
+    return;
+  }
   if (isUpsPaymentOrReviewPage()) {
     updateHelperStatus("Reached UPS payment/review page. Stop here and review before final submit.");
     return;
@@ -443,6 +461,33 @@ function runUpsAutomation(booking) {
 
   window.setTimeout(runFill, 900);
   upsAutomationTimer = window.setTimeout(runFill, 2800);
+}
+
+function persistBookingForUps(booking) {
+  if (!booking) return;
+  window.name = `assistantHubBooking:${encodeURIComponent(JSON.stringify(booking))}`;
+  chrome.storage.local.set({ shippingDeskPendingBooking: booking });
+}
+
+function freshUpsPickupUrl(booking) {
+  const url = new URL("https://wwwapps.ups.com/pickup/request");
+  url.searchParams.set("loc", "en_CA");
+  url.searchParams.set("client", "IPR");
+  url.searchParams.set("assistantHubRun", Date.now().toString());
+  if (booking) {
+    url.searchParams.set("assistantHubBooking", encodeURIComponent(JSON.stringify(booking)));
+  }
+  return url.toString();
+}
+
+function restartUpsPickup(booking) {
+  if (!booking || booking.carrier !== "ups") {
+    updateHelperStatus("No UPS booking data found. Submit the pickup from Assistant Hub again.");
+    return;
+  }
+  persistBookingForUps(booking);
+  updateHelperStatus("Restarting UPS pickup with a fresh session...");
+  location.assign(freshUpsPickupUrl(booking));
 }
 
 function clickUpsNextToReview() {
@@ -521,6 +566,7 @@ function upsDebugSnapshot(booking) {
     booking,
     isClassicPickupPage: isClassicPickupPage(),
     isUpsPaymentOrReviewPage: isUpsPaymentOrReviewPage(),
+    isUpsSessionEndedPage: isUpsSessionEndedPage(),
     bodyTextSample: document.body?.innerText?.trim().replace(/\s+/g, " ").slice(0, 1200) || "",
     domSrvDivText: serviceRoot?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || "",
     domSrvDivHtml: serviceRoot?.innerHTML?.slice(0, 1500) || "",
@@ -571,16 +617,20 @@ function bookingFromUrl() {
 
 function injectPanel(booking) {
   if (document.querySelector("#shipping-desk-helper")) return;
+  if (booking?.carrier === "ups") persistBookingForUps(booking);
+  const sessionEnded = isUpsSessionEndedPage();
+  const paymentOrReview = isUpsPaymentOrReviewPage();
 
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
     <strong>Assistant Hub Helper v${HELPER_VERSION}</strong>
-    <button type="button" data-ups-action="fill">${isUpsPaymentOrReviewPage() ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
-    ${isUpsPaymentOrReviewPage() ? "" : `<button type="button" data-ups-action="next">Go to UPS review</button>`}
+    ${sessionEnded ? `<button type="button" data-ups-action="restart">Restart UPS pickup</button>` : ""}
+    <button type="button" data-ups-action="fill">${paymentOrReview ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
+    ${paymentOrReview || sessionEnded ? "" : `<button type="button" data-ups-action="next">Go to UPS review</button>`}
     <button type="button" data-ups-action="debug">Copy UPS debug</button>
     <span>${booking?.carrier === "ups" ? `${booking.pickupDate || "No date"} ${booking.readyTime || ""}-${booking.closeTime || ""}` : "No UPS booking data found"}</span>
-    <small>${isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Review the fields yourself. Only click Go to UPS review when ready." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
+    <small>${sessionEnded ? "UPS ended this pickup session. Restart opens a fresh pickup page and keeps this booking attached." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Review the fields yourself. Only click Go to UPS review when ready." : "Submit from Assistant Hub again if this should be a UPS pickup."}</small>
   `;
   panel.style.cssText = [
     "position:fixed",
@@ -606,6 +656,7 @@ function injectPanel(booking) {
   panel.addEventListener("click", (event) => {
     const button = event.target.closest("[data-ups-action]");
     if (!button) return;
+    if (button.dataset.upsAction === "restart") restartUpsPickup(booking);
     if (button.dataset.upsAction === "fill") runUpsAutomation(booking);
     if (button.dataset.upsAction === "next") clickUpsNextToReview();
     if (button.dataset.upsAction === "debug") copyUpsDebug(booking);
@@ -616,5 +667,5 @@ function injectPanel(booking) {
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
   const pendingBooking = bookingFromUrl() || bookingFromWindowName() || shippingDeskPendingBooking;
   injectPanel(pendingBooking);
-  updateHelperStatus(isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : "Loaded. Click Fill UPS once.");
+  updateHelperStatus(isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : "Loaded. Click Fill UPS once.");
 });
