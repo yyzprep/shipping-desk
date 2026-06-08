@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.2";
+const HELPER_VERSION = "0.3.3";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -195,12 +195,23 @@ function isUpsSessionEndedPage() {
 }
 
 function isUpsLoginPage() {
-  return /login|signin|sign-in/i.test(location.href)
-    || textIncludes(document.body, "Log In")
-    || textIncludes(document.body, "Sign In")
-    || textIncludes(document.body, "Username")
-    || textIncludes(document.body, "User ID")
-    || textIncludes(document.body, "Password");
+  if (document.getElementById("addrMDCompanyId") || textIncludes(document.body, "Enter Pickup Information")) {
+    return false;
+  }
+  const loginUrl = /\/login|signin|sign-in|ciam|sso/i.test(location.href);
+  const passwordField = [...document.querySelectorAll("input[type='password']")].some(isVisible);
+  const identityField = [...document.querySelectorAll("input")].some((field) => {
+    if (!isVisible(field)) return false;
+    const text = [
+      field.id,
+      field.name,
+      field.getAttribute("autocomplete"),
+      field.getAttribute("placeholder"),
+      field.getAttribute("aria-label")
+    ].filter(Boolean).join(" ").toLowerCase();
+    return /user|email|login|sign.?in/.test(text);
+  });
+  return loginUrl && (passwordField || identityField);
 }
 
 function upsPageStage() {
