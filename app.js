@@ -1047,6 +1047,7 @@ function createPickupEntry(status = "booking") {
     readyTime: isNoTimeCarrier() ? "" : data.readyTime || "",
     closeTime: isNoTimeCarrier() ? "" : data.closeTime || "",
     skids: data.skids || "",
+    autoFill: isUpsPickup(),
     notes,
     summary: presetCopyText(),
     bookingUrl: carrierPortal()
