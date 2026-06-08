@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.3.3";
+const HELPER_VERSION = "0.3.4";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -608,7 +608,7 @@ function persistBookingForUps(booking) {
 }
 
 function freshUpsPickupUrl(booking) {
-  const url = new URL("https://wwwapps.ups.com/pickup/request");
+  const url = new URL("https://wwwapps.ups.com/pickup/schedule");
   url.searchParams.set("loc", "en_CA");
   url.searchParams.set("client", "IPR");
   url.searchParams.set("assistantHubRun", Date.now().toString());
@@ -892,7 +892,7 @@ chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBoo
     && !isUpsLoginPage()
     && !isUpsSessionEndedPage()
     && !isUpsPaymentOrReviewPage();
-  setHelperState(isUpsLoginPage() ? "login" : isUpsPaymentOrReviewPage() ? "ready" : isUpsSessionEndedPage() ? "blocked" : pendingBooking?.autoFill ? "working" : "idle", isUpsLoginPage() ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : pendingBooking?.autoFill ? "Auto-fill starting. Wait for Ready." : "Loaded. Click Fill UPS once, then wait for Ready.");
+  setHelperState(isUpsLoginPage() ? "login" : isUpsPaymentOrReviewPage() ? "ready" : isUpsSessionEndedPage() ? "blocked" : pendingBooking?.autoFill ? "working" : "idle", isUpsLoginPage() ? "LOGIN REQUIRED. Sign in with Chrome/password manager, then click Resume UPS pickup." : isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : pendingBooking?.autoFill ? "Auto-fill starting. UPS may switch to Classic first. Wait for Ready." : "Loaded. Click Fill UPS once, then wait for Ready.");
   if (shouldAutoFill) {
     upsAutoFillStarted = true;
     window.setTimeout(() => runUpsAutomation(pendingBooking), 700);
