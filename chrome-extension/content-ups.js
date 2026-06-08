@@ -17,8 +17,9 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.6";
+const HELPER_VERSION = "0.2.7";
 let upsAutomationTimer = null;
+let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
 
 function setNativeValue(element, value) {
@@ -247,11 +248,21 @@ function setNativeChecked(field, checked) {
   return true;
 }
 
+function clickLabelForId(id) {
+  const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+  if (!label) return false;
+  label.click();
+  label.dispatchEvent(new Event("input", { bubbles: true }));
+  label.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
 function setRadioPair(checkedId, uncheckedId) {
   const checkedField = document.getElementById(checkedId);
   const uncheckedField = document.getElementById(uncheckedId);
   if (!checkedField) return false;
   setNativeChecked(uncheckedField, false);
+  clickLabelForId(checkedId);
   checkedField.click();
   setNativeChecked(checkedField, true);
   setNativeChecked(uncheckedField, false);
@@ -327,6 +338,7 @@ function selectUpsStandardService() {
   clickControl(document.getElementById("domSrvButtonId"));
   clickLabelOrControlByText(["UPS Domestic Services", "domSrvButtonId"], document.getElementById("srvModuleDiv") || document);
   if (checkById("chkSrvDomId4")) {
+    setNativeChecked(document.getElementById("chkSrvDomId4"), true);
     setTextById("selectedServices", "[011#001]");
     return true;
   }
@@ -381,6 +393,37 @@ function fillClassicUpsPickup(booking, instruction) {
   selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
   setTextById("spInstrId", instruction);
   return standardSelected;
+}
+
+function stabilizeClassicUpsPickup(booking, instruction) {
+  if (upsStabilizerTimer) {
+    window.clearInterval(upsStabilizerTimer);
+    upsStabilizerTimer = null;
+  }
+
+  let pass = 0;
+  const runPass = () => {
+    if (!isClassicPickupPage()) return;
+    pass += 1;
+    enableClassicPickupControls();
+    selectUpsStandardService();
+    setTextById("selectedServices", "[011#001]");
+    selectById("pickupdate", formatClassicDateValue(booking.pickupDate));
+    setClassicTime("ready", booking.readyTime);
+    setClassicTime("close", booking.closeTime);
+    selectById("pickuppoint", UPS_DEFAULTS.preferredLocation);
+    setTextById("spInstrId", instruction);
+    if (pass >= 12) {
+      window.clearInterval(upsStabilizerTimer);
+      upsStabilizerTimer = null;
+      const standard = document.getElementById("chkSrvDomId4")?.checked;
+      const readyPm = document.getElementById("readyPMId")?.checked;
+      updateHelperStatus(standard && readyPm ? "UPS fields held steady. Review, then click Go to UPS review." : "Filled again, but UPS is still resetting one field. Copy UPS debug.");
+    }
+  };
+
+  runPass();
+  upsStabilizerTimer = window.setInterval(runPass, 500);
 }
 
 function formatClassicDateValue(dateValue) {
@@ -482,6 +525,8 @@ function runUpsAutomation(booking) {
       confirmClassicView();
     } else {
       const standardSelected = fillUpsPickup(booking);
+      const instruction = `SPIKE pickup request for ${booking.skids || "2"} skids`;
+      stabilizeClassicUpsPickup(booking, instruction);
       updateHelperStatus(standardSelected ? "UPS Standard selected. Review fields, then click Go to UPS review." : "Filled page 1. UPS Standard was not available.");
     }
   };
@@ -580,7 +625,12 @@ function upsDebugSnapshot(booking) {
       exists: Boolean(element),
       value: element?.value || "",
       disabled: Boolean(element?.disabled),
-      checked: Boolean(element?.checked)
+      checked: Boolean(element?.checked),
+      options: element?.tagName === "SELECT" ? [...element.options].map((option) => ({
+        value: option.value,
+        text: option.textContent.trim(),
+        selected: option.selected
+      })) : undefined
     };
   });
 
