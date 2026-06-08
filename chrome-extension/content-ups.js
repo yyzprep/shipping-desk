@@ -17,7 +17,7 @@ const UPS_DEFAULTS = {
   classicReason: "Missing features in the new app"
 };
 
-const HELPER_VERSION = "0.2.8";
+const HELPER_VERSION = "0.2.9";
 let upsAutomationTimer = null;
 let upsStabilizerTimer = null;
 let upsAutomationStarted = false;
@@ -432,9 +432,11 @@ function stabilizeClassicUpsPickup(booking, instruction) {
   }
 
   let pass = 0;
+  setHelperState("working", "Filling UPS fields... wait for Ready before moving on.");
   const runPass = () => {
     if (!isClassicPickupPage()) return;
     pass += 1;
+    setHelperState("working", `Filling UPS fields... stabilizing ${pass}/12.`);
     enableClassicPickupControls();
     selectUpsStandardService();
     setTextById("selectedServices", "[011#001]");
@@ -446,7 +448,11 @@ function stabilizeClassicUpsPickup(booking, instruction) {
     if (pass >= 12) {
       window.clearInterval(upsStabilizerTimer);
       upsStabilizerTimer = null;
-      updateHelperStatus(upsClassicFillMatches(booking) ? "UPS fields held steady. Review, then click Go to UPS review." : "UPS changed the requested date/time after fill. This usually means the requested same-day window is no longer available.");
+      if (upsClassicFillMatches(booking)) {
+        setHelperState("ready", "Ready. UPS fields match Assistant Hub. Click Go to UPS review.");
+      } else {
+        setHelperState("blocked", "Stop. UPS changed the requested date/time after fill. Copy UPS debug.");
+      }
     }
   };
 
@@ -527,17 +533,18 @@ function runUpsAutomation(booking) {
   if (!booking || booking.carrier !== "ups") return;
   persistBookingForUps(booking);
   if (isUpsSessionEndedPage()) {
-    updateHelperStatus("UPS ended this pickup session. Click Restart UPS pickup, then Fill UPS after the page loads.");
+    setHelperState("blocked", "UPS ended this pickup session. Click Restart UPS pickup, then Fill UPS after the page loads.");
     return;
   }
   if (isUpsPaymentOrReviewPage()) {
-    updateHelperStatus("Reached UPS payment/review page. Stop here and review before final submit.");
+    setHelperState("ready", "Reached UPS payment/review page. Stop here and review before final submit.");
     return;
   }
   if (upsAutomationStarted && upsAutomationTimer) {
     window.clearTimeout(upsAutomationTimer);
   }
   upsAutomationStarted = true;
+  setHelperState("working", "Starting UPS fill... wait for Ready before moving on.");
 
   clearUpsOverlays();
   if (!isClassicPickupPage() && switchToClassicView()) {
@@ -550,12 +557,15 @@ function runUpsAutomation(booking) {
 
   const runFill = () => {
     if (!isClassicPickupPage()) {
+      setHelperState("working", "Switching to UPS Classic view...");
       confirmClassicView();
     } else {
       const standardSelected = fillUpsPickup(booking);
       const instruction = `SPIKE pickup request for ${booking.skids || "2"} skids`;
       stabilizeClassicUpsPickup(booking, instruction);
-      updateHelperStatus(standardSelected ? "UPS Standard selected. Review fields, then click Go to UPS review." : "Filled page 1. UPS Standard was not available.");
+      if (!standardSelected) {
+        setHelperState("working", "Filled page 1. Waiting for UPS Standard to stabilize...");
+      }
     }
   };
 
@@ -582,30 +592,69 @@ function freshUpsPickupUrl(booking) {
 
 function restartUpsPickup(booking) {
   if (!booking || booking.carrier !== "ups") {
-    updateHelperStatus("No UPS booking data found. Submit the pickup from Assistant Hub again.");
+    setHelperState("blocked", "No UPS booking data found. Submit the pickup from Assistant Hub again.");
     return;
   }
   persistBookingForUps(booking);
-  updateHelperStatus("Restarting UPS pickup with a fresh session...");
+  setHelperState("working", "Restarting UPS pickup with a fresh session...");
   location.assign(freshUpsPickupUrl(booking));
 }
 
-function clickUpsNextToReview() {
+function clickUpsNextToReview(booking) {
+  if (booking?.carrier === "ups" && isClassicPickupPage() && !upsClassicFillMatches(booking)) {
+    setHelperState("blocked", "Not ready yet. UPS fields do not match Assistant Hub. Click Fill UPS again or copy debug.");
+    return false;
+  }
   const nextButton = [...document.querySelectorAll("input[type='button'], button")]
     .find((button) => isVisible(button) && visibleText(button).trim().toLowerCase() === "next");
   if (!nextButton) {
-    updateHelperStatus("Filled what I could. UPS Next was not available.");
+    setHelperState("blocked", "Filled what I could. UPS Next was not available.");
     return false;
   }
   clickControl(nextButton);
-  updateHelperStatus("Clicked UPS Next. Review UPS validation before final submit.");
+  setHelperState("working", "Clicked UPS Next. Waiting for UPS review page...");
   return true;
 }
 
 function updateHelperStatus(message) {
+  setHelperState(null, message);
+}
+
+function setHelperState(stateName, message) {
   const panel = document.querySelector("#shipping-desk-helper");
+  if (!panel) return;
   const small = panel?.querySelector("small");
   if (small) small.textContent = message;
+  if (stateName) {
+    panel.dataset.state = stateName;
+    const badge = panel.querySelector("[data-helper-badge]");
+    if (badge) {
+      const labels = {
+        idle: "WAITING",
+        working: "FILLING",
+        ready: "READY",
+        blocked: "CHECK"
+      };
+      const colors = {
+        idle: ["#f2c94c", "#172026"],
+        working: ["#2f80ed", "#ffffff"],
+        ready: ["#176b55", "#ffffff"],
+        blocked: ["#c0392b", "#ffffff"]
+      };
+      const [background, color] = colors[stateName] || colors.idle;
+      badge.textContent = labels[stateName] || "WAITING";
+      badge.style.background = background;
+      badge.style.color = color;
+    }
+    const nextButton = panel.querySelector('[data-ups-action="next"]');
+    if (nextButton) {
+      const enabled = stateName === "ready";
+      nextButton.disabled = !enabled;
+      nextButton.setAttribute("aria-disabled", String(!enabled));
+      nextButton.style.opacity = enabled ? "1" : ".45";
+      nextButton.style.cursor = enabled ? "pointer" : "not-allowed";
+    }
+  }
 }
 
 function upsDebugSnapshot(booking) {
@@ -729,7 +778,7 @@ function injectPanel(booking) {
   const panel = document.createElement("div");
   panel.id = "shipping-desk-helper";
   panel.innerHTML = `
-    <strong>Assistant Hub Helper v${HELPER_VERSION}</strong>
+    <strong>Assistant Hub Helper v${HELPER_VERSION} <span data-helper-badge>WAITING</span></strong>
     ${sessionEnded ? `<button type="button" data-ups-action="restart">Restart UPS pickup</button>` : ""}
     <button type="button" data-ups-action="fill">${paymentOrReview ? "Review UPS" : booking?.carrier === "ups" ? "Fill UPS" : "Assistant Hub loaded"}</button>
     ${paymentOrReview || sessionEnded ? "" : `<button type="button" data-ups-action="next">Go to UPS review</button>`}
@@ -757,20 +806,24 @@ function injectPanel(booking) {
     button.style.cssText = "min-height:34px;border:0;border-radius:6px;background:#176b55;color:#fff;font-weight:800;padding:0 12px;cursor:pointer";
   });
   panel.querySelector("strong").style.cssText = "font-size:12px;color:#63717b";
+  panel.querySelector("[data-helper-badge]").style.cssText = "float:right;margin-left:8px;padding:2px 6px;border-radius:999px;background:#f2c94c;color:#172026;font-size:10px;font-weight:900";
   panel.querySelector("small").style.cssText = "color:#63717b;line-height:1.35";
+  panel.dataset.state = paymentOrReview ? "ready" : "idle";
   panel.addEventListener("click", (event) => {
     const button = event.target.closest("[data-ups-action]");
     if (!button) return;
+    if (button.disabled) return;
     if (button.dataset.upsAction === "restart") restartUpsPickup(booking);
     if (button.dataset.upsAction === "fill") runUpsAutomation(booking);
-    if (button.dataset.upsAction === "next") clickUpsNextToReview();
+    if (button.dataset.upsAction === "next") clickUpsNextToReview(booking);
     if (button.dataset.upsAction === "debug") copyUpsDebug(booking);
   });
   document.body.append(panel);
+  setHelperState(paymentOrReview ? "ready" : "idle", sessionEnded ? "UPS ended this pickup session. Restart opens a fresh pickup page and keeps this booking attached." : paymentOrReview ? "Reached UPS payment/review page. Stop here before final submit." : booking?.carrier === "ups" ? "Click Fill UPS. Wait until this says Ready before clicking Go to UPS review." : "Submit from Assistant Hub again if this should be a UPS pickup.");
 }
 
 chrome.storage.local.get("shippingDeskPendingBooking", ({ shippingDeskPendingBooking }) => {
   const pendingBooking = bookingFromUrl() || bookingFromWindowName() || shippingDeskPendingBooking;
   injectPanel(pendingBooking);
-  updateHelperStatus(isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : "Loaded. Click Fill UPS once.");
+  setHelperState(isUpsPaymentOrReviewPage() ? "ready" : isUpsSessionEndedPage() ? "blocked" : "idle", isUpsSessionEndedPage() ? "UPS ended this pickup session. Click Restart UPS pickup." : isUpsPaymentOrReviewPage() ? "Reached UPS payment/review page. Stop here before final submit." : "Loaded. Click Fill UPS once, then wait for Ready.");
 });
